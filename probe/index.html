@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>تست دسترسی واحدچین</title>
+<!-- عمداً بدون فونت یا اسکریپت خارجی: فقط دسترسی خود github.io سنجیده شود (فرضیه A9). -->
+<style>
+  :root {
+    --bg: #f7f7f5; --fg: #1d1d1b; --muted: #66665f; --card: #ffffff;
+    --border: #e2e2dc; --ok: #1a7f37; --bad: #b42318; --accent: #2f5bd3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161615; --fg: #ececea; --muted: #a3a39c; --card: #1f1f1d;
+      --border: #33332f; --ok: #4ac26b; --bad: #f47067; --accent: #7aa2ff;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: Tahoma, "Segoe UI", system-ui, sans-serif; line-height: 1.8;
+  }
+  main { max-width: 640px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  .lead { color: var(--muted); margin: 0 0 24px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px; margin-bottom: 16px;
+  }
+  .big { font-size: 1.25rem; font-weight: bold; color: var(--ok); margin: 0; }
+  dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 0; }
+  dt { color: var(--muted); }
+  dd { margin: 0; overflow-wrap: anywhere; }
+  .ltr { direction: ltr; unicode-bidi: isolate; font-family: Consolas, monospace; }
+  .ok { color: var(--ok); } .bad { color: var(--bad); }
+  button {
+    font: inherit; padding: 8px 16px; border-radius: 8px; cursor: pointer;
+    border: 1px solid var(--accent); background: var(--accent); color: #fff;
+  }
+  textarea {
+    width: 100%; min-height: 9em; font: 0.85rem Consolas, monospace; direction: ltr;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px; margin-top: 8px;
+  }
+  ol { padding-inline-start: 1.2em; margin: 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>تست دسترسی واحدچین</h1>
+  <p class="lead">صفحه آزمایشی برای سنجش باز شدن <span class="ltr">github.io</span> از اینترنت داخل ایران بدون VPN.</p>
+
+  <section class="card">
+    <p class="big">✔ صفحه باز شد.</p>
+    <p style="margin:8px 0 0">اگر این متن را می‌بینید، HTML از GitHub Pages رسیده است. نتیجه بخش‌های پایین را هم یادداشت کنید.</p>
+  </section>
+
+  <section class="card">
+    <h2 style="font-size:1.1rem;margin:0 0 8px">نتایج خودکار</h2>
+    <dl>
+      <dt>اجرای JavaScript</dt><dd id="js" class="bad">اجرا نشد</dd>
+      <dt>نسخه منتشرشده</dt><dd id="build">…</dd>
+      <dt>دانلود ۱ مگابایت</dt><dd id="payload">…</dd>
+      <dt>Service Worker</dt><dd id="sw">…</dd>
+      <dt>IndexedDB</dt><dd id="idb">…</dd>
+      <dt>مرورگر</dt><dd id="ua" class="ltr"></dd>
+    </dl>
+    <p style="margin:12px 0 0"><button id="rerun" type="button">تکرار تست دانلود</button></p>
+  </section>
+
+  <section class="card">
+    <h2 style="font-size:1.1rem;margin:0 0 8px">گزارش برای تیم</h2>
+    <ol>
+      <li>اپراتور را بنویسید (همراه اول، ایرانسل، رایتل، مخابرات/ADSL، فیبر، وای‌فای دانشگاه…).</li>
+      <li>متن زیر را کپی کنید و همراه نام اپراتور بفرستید.</li>
+    </ol>
+    <textarea id="report" readonly></textarea>
+  </section>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var results = { page: "ok", js: "ok" };
+
+  $("js").textContent = "کار می‌کند";
+  $("js").className = "ok";
+  $("ua").textContent = navigator.userAgent;
+  results.userAgent = navigator.userAgent;
+  results.openedAt = new Date().toISOString();
+
+  function writeReport() {
+    $("report").value = JSON.stringify(results, null, 2);
+  }
+
+  function set(id, text, ok) {
+    $(id).textContent = text;
+    $(id).className = ok ? "ok" : "bad";
+  }
+
+  // build-info.json را workflow هنگام انتشار می‌سازد.
+  fetch("build-info.json", { cache: "no-store" })
+    .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    .then(function (info) {
+      $("build").innerHTML = "";
+      var span = document.createElement("span");
+      span.className = "ltr";
+      span.textContent = info.commit.slice(0, 7) + " · " + info.builtAt;
+      $("build").appendChild(span);
+      results.build = info;
+      writeReport();
+    })
+    .catch(function (e) { set("build", "دریافت نشد: " + e.message, false); results.build = "error: " + e.message; writeReport(); });
+
+  // فایل تصادفی ۱ مگابایتی (غیرقابل فشرده‌سازی) که workflow می‌سازد؛ نزدیک به حجم داده یک ترم (NFR-15).
+  function testPayload() {
+    $("payload").textContent = "در حال دانلود…";
+    $("payload").className = "";
+    var t0 = performance.now();
+    fetch("payload.bin?t=" + Date.now(), { cache: "no-store" })
+      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.arrayBuffer(); })
+      .then(function (buf) {
+        var sec = (performance.now() - t0) / 1000;
+        var kb = buf.byteLength / 1024;
+        var text = kb.toFixed(0) + " KB در " + sec.toFixed(2) + " ثانیه (" + (kb / sec).toFixed(0) + " KB/s)";
+        set("payload", text, true);
+        results.payload = { bytes: buf.byteLength, seconds: +sec.toFixed(3) };
+        writeReport();
+      })
+      .catch(function (e) { set("payload", "ناموفق: " + e.message, false); results.payload = "error: " + e.message; writeReport(); });
+  }
+  testPayload();
+  $("rerun").addEventListener("click", testPayload);
+
+  var swOk = "serviceWorker" in navigator && window.isSecureContext;
+  set("sw", swOk ? "پشتیبانی می‌شود" : "پشتیبانی نمی‌شود", swOk);
+  results.serviceWorker = swOk;
+
+  try {
+    var req = indexedDB.open("probe", 1);
+    req.onsuccess = function () { req.result.close(); set("idb", "کار می‌کند", true); results.indexedDB = true; writeReport(); };
+    req.onerror = function () { set("idb", "خطا", false); results.indexedDB = false; writeReport(); };
+  } catch (e) {
+    set("idb", "در دسترس نیست", false); results.indexedDB = false;
+  }
+  writeReport();
+})();
+</script>
+</body>
+</html>

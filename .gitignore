@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node / Vite
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+
+# PDFهای گزارش ۱۱۰ موقتاً خارج از git؛ در مرحله ۲ (پایپ‌لاین) تصمیم LFS و افزودن گرفته می‌شود.
+data/raw/*.pdf
+
+# Pages build output
+_site/
+
+# Editors / OS
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Claude Code local settings
+.claude/settings.local.json

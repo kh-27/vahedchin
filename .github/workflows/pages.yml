@@ -1,0 +1,47 @@
+# مرحله ۱: انتشار صفحه آزمایشی دسترسی (فرضیه A9).
+# در مرحله ۲ و ۴ با پایپ‌لاین داده و build اپ جایگزین می‌شود.
+name: Deploy probe page
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "probe/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/configure-pages@v5
+      - name: Assemble site
+        run: |
+          mkdir -p _site
+          cp -r probe/. _site/
+          # فایل تصادفی غیرقابل فشرده‌سازی برای سنجش سرعت دانلود
+          head -c 1048576 /dev/urandom > _site/payload.bin
+          printf '{"commit":"%s","builtAt":"%s"}\n' "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > _site/build-info.json
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
