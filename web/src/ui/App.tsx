@@ -3,6 +3,8 @@ import { active, generateInput, initialState, pickProblems, reducer, type AppSta
 import { runGenerate, type Running } from "../app/runGenerate";
 import type { TermIndex } from "../app/termIndex";
 import { useTerm } from "../app/useTerm";
+import { useInstallPrompt, useOnline } from "../app/usePwa";
+import { Backup } from "./Backup";
 import { loadState, persist, saveState } from "../storage/db";
 import { fa, faReportTime } from "../lib/text";
 import { Browse } from "./Browse";
@@ -88,6 +90,8 @@ function Ready({ index }: { index: TermIndex }) {
   useEffect(() => remember("tab", tab), [tab]);
   useEffect(() => remember("place", place), [place]);
 
+  const install = useInstallPrompt();
+  const online = useOnline();
   const scenario = active(state);
   const colorOf = useCallback(
     (course: string) => {
@@ -127,6 +131,11 @@ function Ready({ index }: { index: TermIndex }) {
         </p>
       </header>
 
+      {!online && (
+        <p className="card small" role="status">
+          آفلاین هستید؛ از داده ذخیره‌شده ({faReportTime(data.reportDate, data.reportTime)}) استفاده می‌شود. برنامه‌چینی کار می‌کند.
+        </p>
+      )}
       {storageError && <p className="card warn-text small">ذخیره در مرورگر کار نکرد؛ برنامه‌ها با بستن صفحه از بین می‌روند. ({storageError})</p>}
       {scenario.term !== data.term && (
         <p className="card warn-text small">این برنامه برای ترم {fa(scenario.term)} ساخته شده ولی داده فعلی ترم {fa(data.term)} است.</p>
@@ -193,8 +202,21 @@ function Ready({ index }: { index: TermIndex }) {
           }}
         />
       )}
-      {tab === "settings" && <Settings key={scenario.id} settings={scenario.settings} dispatch={dispatch} />}
+      {tab === "settings" && (
+        <>
+          <Settings key={scenario.id} settings={scenario.settings} dispatch={dispatch} />
+          <Backup state={state} dispatch={dispatch} />
+        </>
+      )}
 
+      {install && (
+        <div className="card row between wrap gap">
+          <span className="small">واحدچین را مثل یک اپ روی گوشی نصب کنید؛ بعد از آن بدون اینترنت هم باز می‌شود.</span>
+          <button className="primary small-btn" onClick={() => void install()}>
+            نصب
+          </button>
+        </div>
+      )}
       <footer className="small muted foot">
         برنامه‌های شما فقط در همین مرورگر ذخیره می‌شود و به هیچ سروری فرستاده نمی‌شود. منبع داده: گزارش ۱۱۰ گلستان دانشگاه سمنان.
       </footer>

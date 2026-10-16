@@ -7,7 +7,8 @@ import type { Group } from "../core/types";
 import type { Action, Scenario } from "../app/scenario";
 import type { TermIndex } from "../app/termIndex";
 import { conflictText, groupTitle, sessionLabel, timesSummary, warningText } from "../lib/labels";
-import { fa, faNumber } from "../lib/text";
+import { fa, faNumber, faReportTime } from "../lib/text";
+import { download, schedulePng } from "./exportPng";
 import { ExamList } from "./ExamList";
 import { WeekGrid } from "./WeekGrid";
 
@@ -37,6 +38,7 @@ export function Plan({
   );
   const limits = unitLimits({ gpa: set.gpa, standing: set.standing, manualMin: set.manualMin, manualMax: set.manualMax });
   const units = picked.reduce((t, g) => t + g.units, 0);
+  const [saving, setSaving] = useState(false);
   const singleDate = picked.flatMap((g) => g.sessions.filter((s) => s.day === null).map((s) => ({ g, s })));
 
   if (scenario.courses.length === 0) {
@@ -87,7 +89,30 @@ export function Plan({
       <Warnings report={report} />
 
       <div className="card">
-        <h2>جدول هفتگی</h2>
+        <div className="row between wrap gap">
+          <h2>جدول هفتگی</h2>
+          <button
+            className="secondary small-btn"
+            disabled={picked.length === 0 || saving}
+            onClick={async () => {
+              setSaving(true);
+              try {
+                const blob = await schedulePng({
+                  title: scenario.name,
+                  subtitle: `${fa(index.data.termTitle)}، ${faNumber(units)} واحد، داده گلستان: ${faReportTime(index.data.reportDate, index.data.reportTime)}`,
+                  footer: "ساخته‌شده با واحدچین — kh-27.github.io/vahedchin",
+                  groups: picked,
+                  colorOf,
+                });
+                download(blob, `vahedchin-${index.data.term}-${scenario.name.replace(/[\\/:*?"<>|]+/g, "-")}.png`);
+              } finally {
+                setSaving(false);
+              }
+            }}
+          >
+            دانلود تصویر (PNG)
+          </button>
+        </div>
         <WeekGrid groups={picked} colorOf={colorOf} />
         {singleDate.length > 0 && (
           <div className="small">

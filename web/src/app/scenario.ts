@@ -92,6 +92,7 @@ export type Action =
   | { type: "renameScenario"; name: string }
   | { type: "deleteScenario" }
   | { type: "switchScenario"; id: string }
+  | { type: "importScenarios"; scenarios: Scenario[] }
   | { type: "replace"; state: AppState };
 
 export function active(state: AppState): Scenario {
@@ -201,6 +202,17 @@ export function reducer(state: AppState, action: Action): AppState {
     }
     case "switchScenario":
       return state.scenarios.some((s) => s.id === action.id) ? { ...state, activeId: action.id } : state;
+    case "importScenarios": {
+      if (action.scenarios.length === 0) return state;
+      const taken = new Set(state.scenarios.map((s) => s.name));
+      const added = action.scenarios.map((s) => {
+        let name = s.name;
+        for (let i = 2; taken.has(name); i++) name = `${s.name} (${i})`;
+        taken.add(name);
+        return { ...s, id: newId(), name, updatedAt: Date.now() };
+      });
+      return { scenarios: [...state.scenarios, ...added], activeId: added[0]!.id };
+    }
     case "replace":
       return action.state;
   }
@@ -241,4 +253,106 @@ export function pickProblems(s: Scenario, byCode: ReadonlyMap<string, Group>): P
     else if (s.snapshot[code] !== undefined && s.snapshot[code] !== fingerprint(g)) out.push({ course, code, kind: "changed" });
   }
   return out;
+}
+
+// FR-07: moving scenarios between devices as a JSON file.
+
+export const EXPORT_APP = "vahedchin";
+export const EXPORT_VERSION = 1;
+
+export interface ExportFile {
+  app: typeof EXPORT_APP;
+  version: typeof EXPORT_VERSION;
+  exportedAt: string;
+  scenarios: Scenario[];
+}
+
+export function exportFile(state: AppState, now = new Date()): ExportFile {
+  return { app: EXPORT_APP, version: EXPORT_VERSION, exportedAt: now.toISOString(), scenarios: state.scenarios };
+}
+
+export class ImportError extends Error {}
+
+/** Reads an exported file; throws ImportError (Persian message) when it is not one. */
+export function parseImport(text: string): Scenario[] {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    throw new ImportError("فایل JSON معتبر نیست.");
+  }
+  const f = raw as Partial<ExportFile> | null;
+  if (!f || typeof f !== "object" || f.app !== EXPORT_APP) throw new ImportError("این فایل خروجی واحدچین نیست.");
+  if (f.version !== EXPORT_VERSION) throw new ImportError(`نسخه فایل (${String(f.version)}) پشتیبانی نمی‌شود.`);
+  if (!Array.isArray(f.scenarios)) throw new ImportError("فایل هیچ برنامه‌ای ندارد.");
+  const scenarios = f.scenarios.map(normalizeScenario);
+  if (scenarios.some((s) => s === null)) throw new ImportError("بعضی برنامه‌های فایل خراب‌اند.");
+  return scenarios as Scenario[];
+}
+
+const isObj = (x: unknown): x is Record<string, unknown> => typeof x === "object" && x !== null && !Array.isArray(x);
+const isStrRecord = (x: unknown): x is Record<string, string> => isObj(x) && Object.values(x).every((v) => typeof v === "string");
+const numOrNull = (x: unknown): number | null => (typeof x === "number" && Number.isFinite(x) ? x : null);
+
+/** Checks a stored or imported scenario and fills settings added in later versions. */
+export function normalizeScenario(x: unknown): Scenario | null {
+  if (!isObj(x) || typeof x.id !== "string" || typeof x.name !== "string" || typeof x.term !== "string") return null;
+  if (!Array.isArray(x.courses) || !isStrRecord(x.picks) || !isStrRecord(x.snapshot ?? {})) return null;
+  const courses: ScenarioCourse[] = [];
+  for (const c of x.courses) {
+    if (!isObj(c) || typeof c.course !== "string") return null;
+    courses.push({
+      course: c.course,
+      required: c.required !== false,
+      excluded: Array.isArray(c.excluded) ? c.excluded.filter((e): e is string => typeof e === "string") : [],
+      locked: typeof c.locked === "string" ? c.locked : null,
+    });
+  }
+  const st = isObj(x.settings) ? x.settings : {};
+  const prefs = isObj(st.prefs) ? st.prefs : {};
+  const standing = st.standing === "excellent" || st.standing === "probation" ? st.standing : "normal";
+  const gender = st.gender === "male" || st.gender === "female" ? st.gender : null;
+  const blocks = Array.isArray(st.blocks)
+    ? st.blocks.filter(
+        (b): b is TimeBlock =>
+          isObj(b) && Number.isInteger(b.day) && (b.day as number) >= 0 && (b.day as number) <= 6 && typeof b.start === "string" && typeof b.end === "string",
+      )
+    : [];
+  const weight = (k: keyof Preferences) => (typeof prefs[k] === "number" ? (prefs[k] as number) : (DEFAULT_PREFERENCES[k] as number));
+  return {
+    id: x.id,
+    name: x.name,
+    term: x.term,
+    courses,
+    picks: x.picks,
+    snapshot: (x.snapshot as Record<string, string> | undefined) ?? {},
+    settings: {
+      standing,
+      gpa: numOrNull(st.gpa),
+      manualMin: numOrNull(st.manualMin),
+      manualMax: numOrNull(st.manualMax),
+      gender,
+      blocks,
+      minExamGapDays: numOrNull(st.minExamGapDays),
+      prefs: {
+        fewerDays: weight("fewerDays"),
+        early: weight("early"),
+        noClassBefore: typeof prefs.noClassBefore === "string" && prefs.noClassBefore ? prefs.noClassBefore : null,
+        lessIdle: weight("lessIdle"),
+        teacher: weight("teacher"),
+        preferredTeachers: Array.isArray(prefs.preferredTeachers) ? prefs.preferredTeachers.filter((t): t is string => typeof t === "string") : [],
+        examSpacing: weight("examSpacing"),
+      },
+    },
+    updatedAt: typeof x.updatedAt === "number" ? x.updatedAt : Date.now(),
+  };
+}
+
+/** A stored AppState, checked; null if unusable. */
+export function normalizeState(x: unknown): AppState | null {
+  if (!isObj(x) || !Array.isArray(x.scenarios)) return null;
+  const scenarios = x.scenarios.map(normalizeScenario).filter((s): s is Scenario => s !== null);
+  if (scenarios.length === 0) return null;
+  const activeId = typeof x.activeId === "string" && scenarios.some((s) => s.id === x.activeId) ? x.activeId : scenarios[0]!.id;
+  return { scenarios, activeId };
 }

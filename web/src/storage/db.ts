@@ -1,6 +1,6 @@
 /** FR-44: scenarios live in the browser's IndexedDB; nothing is sent anywhere (NFR-04). */
 
-import type { AppState } from "../app/scenario";
+import { normalizeState, type AppState } from "../app/scenario";
 
 const DB = "vahedchin";
 const STORE = "state";
@@ -34,8 +34,7 @@ function run<T>(mode: IDBTransactionMode, f: (store: IDBObjectStore) => IDBReque
 }
 
 export async function loadState(): Promise<AppState | null> {
-  const value = await run<unknown>("readonly", (s) => s.get(KEY));
-  return isState(value) ? value : null;
+  return normalizeState(await run<unknown>("readonly", (s) => s.get(KEY)));
 }
 
 export async function saveState(state: AppState): Promise<void> {
@@ -49,10 +48,4 @@ export async function persist(): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-function isState(v: unknown): v is AppState {
-  if (typeof v !== "object" || v === null) return false;
-  const s = v as Partial<AppState>;
-  return Array.isArray(s.scenarios) && s.scenarios.length > 0 && typeof s.activeId === "string";
 }
