@@ -116,13 +116,19 @@ def _group_json(g: Group) -> dict:
         "waitlist": g.waitlist,
         "gender": g.gender,
         "teacher": g.teacher,
-        "sessions": [asdict(s) for s in g.sessions],
+        "sessions": [_session_json(s) for s in g.sessions],
         "exams": [asdict(e) for e in g.exams],
         "notes": g.notes,
         "otherCenters": g.other_centers,
         "emergencyDrop": g.emergency_drop,
         "department": g.department,
     }
+
+
+def _session_json(s: Session) -> dict:
+    d = asdict(s)
+    d["weekNumber"] = d.pop("week_number")
+    return d
 
 
 def _num(x: float) -> int | float:

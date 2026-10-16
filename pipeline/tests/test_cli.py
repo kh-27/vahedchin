@@ -46,6 +46,7 @@ def test_fr69_success_writes_term_json(run):
     assert data["source"] == {"file": "all4051.pdf", "sha256": "ab", "pages": 1}
     g = data["groups"][0]
     assert g["code"] == "1118061_01" and g["units"] == 3 and g["exams"][0]["kind"] == "final"
+    assert list(g["sessions"][0]) == ["kind", "type", "day", "date", "start", "end", "week", "half", "place", "weekNumber"]
     assert text.count("\n") == 4  # head, one line per group, closing
     assert "✅ ترم `4042` بدون خطا" in summary
     assert output.read_text(encoding="utf-8").splitlines()[:2] == ["term=4042", "report_date=1405/07/24"]

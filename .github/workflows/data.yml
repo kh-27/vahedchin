@@ -8,6 +8,8 @@ on:
     branches: [main]
     paths:
       - "data/raw/**.pdf"
+      - "pipeline/golestan/**" # parser changed: re-parse every source PDF
+      - "pipeline/requirements.txt"
   workflow_dispatch:
     inputs:
       pdf:
@@ -48,7 +50,8 @@ jobs:
         run: |
           if [ -n "$INPUT_PDF" ]; then
             printf '%s\n' "$INPUT_PDF" > pdfs.txt
-          elif [ "${{ github.event_name }}" = push ] && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+          elif [ "${{ github.event_name }}" = push ] && git cat-file -e "$BEFORE^{commit}" 2>/dev/null &&
+            git diff --quiet "$BEFORE" "$GITHUB_SHA" -- pipeline/golestan pipeline/requirements.txt; then
             git diff --name-only --diff-filter=AM "$BEFORE" "$GITHUB_SHA" -- 'data/raw/*.pdf' > pdfs.txt
           else
             ls data/raw/*.pdf > pdfs.txt
