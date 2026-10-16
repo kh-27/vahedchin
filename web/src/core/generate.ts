@@ -152,6 +152,10 @@ export function generate(input: GenerateInput): GenerateResult {
   const chosen: number[] = [];
   const busy = new Uint32Array(7 * W); // busy slots per day
   const idleOfDay = new Int32Array(7);
+  const busyLo = new Int32Array(7).fill(W); // first non-empty word per day (W: none)
+  const busyHi = new Int32Array(7).fill(-1);
+  const savedLo = new Int32Array((slots.length + 1) * 7);
+  const savedHi = new Int32Array((slots.length + 1) * 7);
   const savedBusy = new Uint32Array((slots.length + 1) * 7 * W);
   const savedIdle = new Int32Array((slots.length + 1) * 7);
   let dayMask = 0;
@@ -159,6 +163,9 @@ export function generate(input: GenerateInput): GenerateResult {
   let idle = 0; // idle slots, all days
   let others = 0;
   let closeness = 0;
+  // Exam closeness of each last-level candidate to the chosen groups (only those are kept).
+  const lastCandidates = slots.length > 0 ? slots[slots.length - 1]!.candidates : [];
+  const closeToChosen = new Int32Array(n);
 
   const heap = new WorstFirstHeap(maxResults);
   let total = 0;
@@ -172,18 +179,26 @@ export function generate(input: GenerateInput): GenerateResult {
       const d = p.days[k]!;
       const words = p.slots[k]!;
       const at = d * W;
-      const save = (depth * 7 + d) * W;
-      for (let w = 0; w < W; w++) {
+      const sd = depth * 7 + d;
+      const save = sd * W;
+      const lo = p.wordLo[k]!;
+      const hi = p.wordHi[k]!;
+      for (let w = lo; w <= hi; w++) {
         savedBusy[save + w] = busy[at + w]!;
         busy[at + w]! |= words[w]!;
       }
-      savedIdle[depth * 7 + d] = idleOfDay[d]!;
-      const now = idleSlots(busy, at);
+      savedLo[sd] = busyLo[d]!;
+      savedHi[sd] = busyHi[d]!;
+      busyLo[d] = Math.min(busyLo[d]!, lo);
+      busyHi[d] = Math.max(busyHi[d]!, hi);
+      savedIdle[sd] = idleOfDay[d]!;
+      const now = idleSlots(busy, at, busyLo[d]!, busyHi[d]!);
       idle += now - idleOfDay[d]!;
       idleOfDay[d] = now;
     }
     others += p.otherTeacher;
     for (const j of chosen) closeness += close[c * n + j]!;
+    for (const x of lastCandidates) closeToChosen[x]! += close[x * n + c]!;
     for (const x of conflictsWith[c]!) blockedBy[x]!++;
     chosen.push(c);
   };
@@ -192,15 +207,19 @@ export function generate(input: GenerateInput): GenerateResult {
     chosen.pop();
     const p = profiles[c]!;
     for (const x of conflictsWith[c]!) blockedBy[x]!--;
+    for (const x of lastCandidates) closeToChosen[x]! -= close[x * n + c]!;
     for (const j of chosen) closeness -= close[c * n + j]!;
     others -= p.otherTeacher;
     for (let k = p.days.length - 1; k >= 0; k--) {
       const d = p.days[k]!;
       const at = d * W;
-      const save = (depth * 7 + d) * W;
-      for (let w = 0; w < W; w++) busy[at + w] = savedBusy[save + w]!;
-      idle += savedIdle[depth * 7 + d]! - idleOfDay[d]!;
-      idleOfDay[d] = savedIdle[depth * 7 + d]!;
+      const sd = depth * 7 + d;
+      const save = sd * W;
+      for (let w = p.wordLo[k]!; w <= p.wordHi[k]!; w++) busy[at + w] = savedBusy[save + w]!;
+      busyLo[d] = savedLo[sd]!;
+      busyHi[d] = savedHi[sd]!;
+      idle += savedIdle[sd]! - idleOfDay[d]!;
+      idleOfDay[d] = savedIdle[sd]!;
     }
   };
 
@@ -226,21 +245,25 @@ export function generate(input: GenerateInput): GenerateResult {
       let idleNow = idle;
       for (let k = 0; k < p.days.length; k++) {
         const d = p.days[k]!;
-        idleNow += idleSlotsWith(busy, d * W, p.slots[k]!) - idleOfDay[d]!;
+        idleNow +=
+          dayMask & (1 << d)
+            ? idleSlotsWith(busy, d * W, p.slots[k]!, Math.min(busyLo[d]!, p.wordLo[k]!), Math.max(busyHi[d]!, p.wordHi[k]!)) -
+              idleOfDay[d]!
+            : p.idleAlone[k]!;
       }
-      let closeNow = closeness;
-      for (const j of chosen) closeNow += close[c * n + j]!;
       const score = scoreOf(
         prefs,
         popcount(dayMask | p.dayMask),
         popcount(earlyMask | p.earlyMask),
         (idleNow * SLOT_MINUTES) / 60,
         others + p.otherTeacher,
-        closeNow,
+        closeness + closeToChosen[c]!,
       );
-      chosen.push(c);
-      record(score, u);
-      chosen.pop();
+      if (maxResults > 0 && heap.accepts(score)) {
+        chosen.push(c);
+        record(score, u);
+        chosen.pop();
+      } else total++;
     }
     if (!slot.choice.required && units >= min) leaf(units);
   };

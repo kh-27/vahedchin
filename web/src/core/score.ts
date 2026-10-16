@@ -56,6 +56,11 @@ export interface GroupProfile {
   /** Days with weekly sessions, and each day's busy slots (same order). */
   days: number[];
   slots: Uint32Array[];
+  /** Idle slots of each of those days with only this group. */
+  idleAlone: number[];
+  /** First and last non-empty word of each of those days. */
+  wordLo: number[];
+  wordHi: number[];
   examDays: number[];
   otherTeacher: 0 | 1;
 }
@@ -80,6 +85,9 @@ export function profile(g: Group, prefs: Preferences): GroupProfile {
     earlyMask,
     days,
     slots: days.map((d) => byDay.get(d)!),
+    idleAlone: days.map((d) => idleSlots(byDay.get(d)!)),
+    wordLo: days.map((d) => byDay.get(d)!.findIndex((x) => x !== 0)),
+    wordHi: days.map((d) => byDay.get(d)!.findLastIndex((x) => x !== 0)),
     examDays: g.exams.map((e) => jalaliToJdn(e.date)),
     otherTeacher: prefs.preferredTeachers.includes(g.teacher) ? 0 : 1,
   };
@@ -98,12 +106,15 @@ export function popcount(x: number): number {
   return (((v + (v >>> 4)) & 0x0f0f0f0f) * 0x01010101) >>> 24;
 }
 
-/** Empty slots between the first and last busy slot in words[offset .. offset + SLOT_WORDS). */
-export function idleSlots(words: Uint32Array, offset = 0): number {
+/**
+ * Empty slots between the first and last busy slot of words[offset + lo ..= offset + hi]
+ * (the caller guarantees the other words of the day are empty).
+ */
+export function idleSlots(words: Uint32Array, offset = 0, lo = 0, hi = SLOT_WORDS - 1): number {
   let first = -1;
   let last = -1;
   let busy = 0;
-  for (let w = 0; w < SLOT_WORDS; w++) {
+  for (let w = lo; w <= hi; w++) {
     const x = words[offset + w]!;
     if (x === 0) continue;
     if (first < 0) first = w * 32 + (31 - Math.clz32(x & -x));
@@ -113,12 +124,12 @@ export function idleSlots(words: Uint32Array, offset = 0): number {
   return first < 0 ? 0 : last - first + 1 - busy;
 }
 
-/** idleSlots of (words[offset ..] | extra), without writing anything. */
-export function idleSlotsWith(words: Uint32Array, offset: number, extra: Uint32Array): number {
+/** idleSlots of (words[offset ..] | extra) over words lo..hi, without writing anything. */
+export function idleSlotsWith(words: Uint32Array, offset: number, extra: Uint32Array, lo = 0, hi = SLOT_WORDS - 1): number {
   let first = -1;
   let last = -1;
   let busy = 0;
-  for (let w = 0; w < SLOT_WORDS; w++) {
+  for (let w = lo; w <= hi; w++) {
     const x = (words[offset + w]! | extra[w]!) >>> 0;
     if (x === 0) continue;
     if (first < 0) first = w * 32 + (31 - Math.clz32(x & -x));
