@@ -9,6 +9,7 @@ import {
   examCloseness,
   features,
   idleSlots,
+  idleSlotsWith,
   popcount,
   profile,
   scoreOf,
@@ -203,31 +204,72 @@ export function generate(input: GenerateInput): GenerateResult {
     }
   };
 
-  const leaf = (units: number) => {
+  const record = (score: number, units: number) => {
     total++;
-    if (maxResults === 0) return;
-    const score = scoreOf(prefs, popcount(dayMask), popcount(earlyMask), (idle * SLOT_MINUTES) / 60, others, closeness);
-    if (!heap.accepts(score)) return;
+    if (maxResults === 0 || !heap.accepts(score)) return;
     const groups = chosen.map((i) => pool[i]!);
     const { parts } = weigh(features(chosen.map((i) => profiles[i]!)), prefs);
     heap.push({ score, seq: total, ranked: { groups, units, score, parts } });
   };
 
-  const visit = (depth: number, units: number): void => {
+  const leaf = (units: number) =>
+    record(scoreOf(prefs, popcount(dayMask), popcount(earlyMask), (idle * SLOT_MINUTES) / 60, others, closeness), units);
+
+  // The last level holds almost all leaves: score each candidate from the
+  // current state without the save/restore work of take/untake.
+  const lastLevel = (slot: Slot, units: number) => {
+    for (const c of slot.candidates) {
+      if (!tick()) return;
+      const u = units + pool[c]!.units;
+      if (blockedBy[c]! > 0 || u > max || u < min) continue;
+      const p = profiles[c]!;
+      let idleNow = idle;
+      for (let k = 0; k < p.days.length; k++) {
+        const d = p.days[k]!;
+        idleNow += idleSlotsWith(busy, d * W, p.slots[k]!) - idleOfDay[d]!;
+      }
+      let closeNow = closeness;
+      for (const j of chosen) closeNow += close[c * n + j]!;
+      const score = scoreOf(
+        prefs,
+        popcount(dayMask | p.dayMask),
+        popcount(earlyMask | p.earlyMask),
+        (idleNow * SLOT_MINUTES) / 60,
+        others + p.otherTeacher,
+        closeNow,
+      );
+      chosen.push(c);
+      record(score, u);
+      chosen.pop();
+    }
+    if (!slot.choice.required && units >= min) leaf(units);
+  };
+
+  /** Count one search node; false when the search must stop (maxNodes or cancel). */
+  const tick = (): boolean => {
     if (++nodes >= maxNodes) {
       stopped = true;
-      return;
+      return false;
     }
     if (input.shouldCancel && nodes % CANCEL_POLL === 0 && input.shouldCancel()) {
       stopped = cancelled = true;
-      return;
+      return false;
     }
+    return true;
+  };
+
+  const visit = (depth: number, units: number): void => {
+    if (!tick()) return;
     if (units + restMax[depth]! < min) return;
     if (depth === slots.length) {
       leaf(units);
       return;
     }
     const slot = slots[depth]!;
+    if (depth === slots.length - 1) {
+      lastLevel(slot, units);
+      return;
+    }
     for (const c of slot.candidates) {
       const u = units + pool[c]!.units;
       if (blockedBy[c]! > 0 || u > max) continue;

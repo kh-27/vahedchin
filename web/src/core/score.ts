@@ -113,6 +113,21 @@ export function idleSlots(words: Uint32Array, offset = 0): number {
   return first < 0 ? 0 : last - first + 1 - busy;
 }
 
+/** idleSlots of (words[offset ..] | extra), without writing anything. */
+export function idleSlotsWith(words: Uint32Array, offset: number, extra: Uint32Array): number {
+  let first = -1;
+  let last = -1;
+  let busy = 0;
+  for (let w = 0; w < SLOT_WORDS; w++) {
+    const x = (words[offset + w]! | extra[w]!) >>> 0;
+    if (x === 0) continue;
+    if (first < 0) first = w * 32 + (31 - Math.clz32(x & -x));
+    last = w * 32 + (31 - Math.clz32(x));
+    busy += popcount(x);
+  }
+  return first < 0 ? 0 : last - first + 1 - busy;
+}
+
 /** Closeness penalty of exam days a against b. */
 export function examCloseness(a: readonly number[], b: readonly number[]): number {
   let sum = 0;
