@@ -1,14 +1,21 @@
-# مرحله ۱: انتشار صفحه آزمایشی دسترسی (فرضیه A9).
-# در مرحله ۲ و ۴ با پایپ‌لاین داده و build اپ جایگزین می‌شود.
-name: Deploy probe page
+# Publishes the site: for now the probe page (A9) plus data/terms/*.json.
+# Stage 4 replaces probe/ with the app build.
+name: Deploy site
 
 on:
   push:
     branches: [main]
     paths:
       - "probe/**"
+      - "data/terms/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        description: "Git ref to publish"
+        type: string
+        required: false
 
 permissions:
   contents: read
@@ -24,14 +31,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || github.sha }}
       - uses: actions/configure-pages@v5
       - name: Assemble site
         run: |
-          mkdir -p _site
+          mkdir -p _site/data
           cp -r probe/. _site/
+          if ls data/terms/*.json >/dev/null 2>&1; then cp data/terms/*.json _site/data/; fi
           # فایل تصادفی غیرقابل فشرده‌سازی برای سنجش سرعت دانلود
           head -c 1048576 /dev/urandom > _site/payload.bin
-          printf '{"commit":"%s","builtAt":"%s"}\n' "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > _site/build-info.json
+          printf '{"commit":"%s","builtAt":"%s"}\n' "$(git rev-parse HEAD)" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > _site/build-info.json
       - uses: actions/upload-pages-artifact@v4
         with:
           path: _site

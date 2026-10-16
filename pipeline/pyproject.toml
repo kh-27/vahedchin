@@ -1,0 +1,21 @@
+[project]
+name = "golestan"
+version = "0.1.0"
+description = "Parser for Golestan report 110 PDFs (Semnan University) -> data/terms/<term>.json"
+requires-python = ">=3.11"
+dependencies = ["pdfplumber==0.11.10"]
+
+[project.optional-dependencies]
+test = ["pytest==9.1.1", "pytest-cov==7.1.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["reference: slow tests on the reference PDFs (NFR-13)"]
+addopts = "-ra"
+
+[tool.coverage.run]
+source = ["golestan"]
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true

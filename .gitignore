@@ -14,9 +14,6 @@ coverage/
 playwright-report/
 test-results/
 
-# PDFهای گزارش ۱۱۰ موقتاً خارج از git؛ در مرحله ۲ (پایپ‌لاین) تصمیم LFS و افزودن گرفته می‌شود.
-data/raw/*.pdf
-
 # Pages build output
 _site/
 
