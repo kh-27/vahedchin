@@ -150,6 +150,15 @@ describe("FR-33: why there is no combination", () => {
     const r = generate({ groups: [x, y1, y2, z1, z2], courses: [req("5000001"), req("5000002"), req("5000003")], limits });
     expect(r.explanation).toEqual({ kind: "combination" });
   });
+  it("conflict-free combinations exist but none reaches the unit floor", () => {
+    // 4000001 and 4000002 always clash; whichever is taken, at most 3 + 10 = 13 < 14 units.
+    const r = generate({ groups: [a2, b1, c1], courses: [{ course: "4000001", required: false }, { course: "4000002", required: false }, req("4000003")], limits: { min: 14, max: 20 } });
+    expect(r.total).toBe(0);
+    expect(r.explanation).toEqual({ kind: "below_min", bestUnits: 13, min: 14 });
+  });
+  it("reports the most units found", () => {
+    expect(generate({ groups: [a2, c1], courses: [req("4000001"), { course: "4000003", required: false }], limits }).bestUnits).toBe(13);
+  });
   it("is null when combinations exist", () => {
     expect(generate({ groups: [a2], courses: [req("4000001")], limits }).explanation).toBeNull();
   });

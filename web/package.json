@@ -4,15 +4,29 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "data": "node scripts/prepare-data.mjs",
+    "dev": "npm run data && vite",
+    "build": "npm run data && tsc --noEmit && vite build",
+    "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:cov": "vitest run --coverage --exclude src/core/perf.test.ts"
+    "test:cov": "vitest run --coverage --exclude src/core/perf.test.ts",
+    "e2e": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.1",
     "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
     "@vitest/coverage-v8": "5.0.5",
     "fast-check": "4.10.2",
     "typescript": "7.0.2",
+    "vite": "8.3.4",
     "vitest": "5.0.5"
+  },
+  "dependencies": {
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
   }
 }

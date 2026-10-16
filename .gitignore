@@ -26,3 +26,10 @@ Desktop.ini
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Term data copied into the app by web/scripts/prepare-data.mjs
+web/public/data/
+
+# Playwright
+web/test-results/
+web/playwright-report/

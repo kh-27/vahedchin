@@ -58,6 +58,7 @@ export type Explanation =
   | { kind: "required_over_max"; minUnits: number; max: number }
   | { kind: "under_min"; maxUnits: number; min: number }
   | { kind: "required_pair"; a: string; b: string }
+  | { kind: "below_min"; bestUnits: number; min: number }
   | { kind: "combination" };
 
 export interface GenerateResult {
@@ -71,6 +72,8 @@ export interface GenerateResult {
   complete: boolean;
   cancelled: boolean;
   nodes: number;
+  /** Most units among the valid combinations found (0 if none). */
+  bestUnits: number;
   /** Why there is no valid combination (FR-33); null when there is one. */
   explanation: Explanation | null;
 }
@@ -169,6 +172,7 @@ export function generate(input: GenerateInput): GenerateResult {
 
   const heap = new WorstFirstHeap(maxResults);
   let total = 0;
+  let bestUnits = 0;
   let nodes = 0;
   let stopped = false;
   let cancelled = false;
@@ -225,6 +229,7 @@ export function generate(input: GenerateInput): GenerateResult {
 
   const record = (score: number, units: number) => {
     total++;
+    if (units > bestUnits) bestUnits = units;
     if (maxResults === 0 || !heap.accepts(score)) return;
     const groups = chosen.map((i) => pool[i]!);
     const { parts } = weigh(features(chosen.map((i) => profiles[i]!)), prefs);
@@ -263,7 +268,10 @@ export function generate(input: GenerateInput): GenerateResult {
         chosen.push(c);
         record(score, u);
         chosen.pop();
-      } else total++;
+      } else {
+        total++;
+        if (u > bestUnits) bestUnits = u;
+      }
     }
     if (!slot.choice.required && units >= min) leaf(units);
   };
@@ -318,12 +326,23 @@ export function generate(input: GenerateInput): GenerateResult {
     complete: !stopped,
     cancelled,
     nodes,
-    explanation: total === 0 && !stopped ? explain(slots, conflictsWith) : null,
+    bestUnits,
+    explanation: total === 0 && !stopped ? explainEmpty(input, slots, conflictsWith) : null,
   };
 }
 
 function empty(explanation: Explanation): GenerateResult {
-  return { results: [], total: 0, truncated: false, complete: true, cancelled: false, nodes: 0, explanation };
+  return { results: [], total: 0, truncated: false, complete: true, cancelled: false, nodes: 0, bestUnits: 0, explanation };
+}
+
+/** Conflict-free combinations that only miss the unit floor are a different problem from clashes. */
+function explainEmpty(input: GenerateInput, slots: Slot[], conflictsWith: number[][]): Explanation {
+  const { min, max } = input.limits;
+  if (min > 0) {
+    const relaxed = generate({ ...input, limits: { min: 0, max }, maxResults: 0 });
+    if (relaxed.total > 0 && relaxed.bestUnits < min) return { kind: "below_min", bestUnits: relaxed.bestUnits, min };
+  }
+  return explain(slots, conflictsWith);
 }
 
 /** FR-33: a pair of required courses whose every group pair conflicts, else a general reason. */

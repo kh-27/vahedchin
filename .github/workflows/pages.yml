@@ -1,11 +1,12 @@
-# Publishes the site: for now the probe page (A9) plus data/terms/*.json.
-# Stage 4 replaces probe/ with the app build.
+# Publishes the site: the app (web/, with data/terms/*.json under /data/) and
+# the A9 reachability probe under /probe/.
 name: Deploy site
 
 on:
   push:
     branches: [main]
     paths:
+      - "web/**"
       - "probe/**"
       - "data/terms/**"
       - ".github/workflows/pages.yml"
@@ -34,14 +35,26 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.sha }}
       - uses: actions/configure-pages@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Build the app
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
       - name: Assemble site
         run: |
-          mkdir -p _site/data
-          cp -r probe/. _site/
-          if ls data/terms/*.json >/dev/null 2>&1; then cp data/terms/*.json _site/data/; fi
+          mkdir -p _site
+          cp -r web/dist/. _site/
+          mkdir -p _site/probe
+          cp -r probe/. _site/probe/
           # فایل تصادفی غیرقابل فشرده‌سازی برای سنجش سرعت دانلود
-          head -c 1048576 /dev/urandom > _site/payload.bin
-          printf '{"commit":"%s","builtAt":"%s"}\n' "$(git rev-parse HEAD)" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > _site/build-info.json
+          head -c 1048576 /dev/urandom > _site/probe/payload.bin
+          printf '{"commit":"%s","builtAt":"%s"}\n' "$(git rev-parse HEAD)" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > _site/probe/build-info.json
+          ls -R _site | head -40
       - uses: actions/upload-pages-artifact@v4
         with:
           path: _site

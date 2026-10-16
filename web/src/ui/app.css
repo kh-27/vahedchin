@@ -1,0 +1,143 @@
+/* واحدچین — mobile first (>= 360px), RTL, no external fonts (they may be blocked in Iran). */
+
+:root {
+  --bg: #f6f7f9;
+  --card: #ffffff;
+  --fg: #1c1d21;
+  --muted: #5f636d;
+  --border: #dfe2e8;
+  --accent: #2f5bd3;
+  --accent-fg: #ffffff;
+  --bad: #c0352b;
+  --warn: #9a6400;
+  --radius: 10px;
+  /* course colors (light) */
+  --c0: #dbe7ff; --c1: #ffe3cf; --c2: #d9f4e3; --c3: #f8dcef; --c4: #fff3c2;
+  --c5: #dcf2f8; --c6: #e9e0ff; --c7: #ffdcdc; --c8: #e3f0d0; --c9: #e7e9ee;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15161a; --card: #1f2127; --fg: #eceef2; --muted: #a3a8b3; --border: #33363f;
+    --accent: #7aa2ff; --accent-fg: #0e1530; --bad: #ff7b70; --warn: #f0b74a;
+    --c0: #2a3a63; --c1: #5a3a22; --c2: #234a33; --c3: #55304b; --c4: #514618;
+    --c5: #1f4752; --c6: #3d3366; --c7: #5c2a2a; --c8: #3a4a24; --c9: #3a3d45;
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: Vazirmatn, "Segoe UI", Tahoma, "Noto Sans Arabic", system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+}
+.app { max-width: 920px; margin: 0 auto; padding: 12px 12px 48px; }
+h1 { font-size: 1.35rem; margin: 0; }
+h2 { font-size: 1.05rem; margin: 0 0 8px; }
+h3 { font-size: 0.95rem; margin: 12px 0 4px; }
+p { margin: 0; }
+.top { margin-bottom: 10px; }
+
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; margin: 0 0 10px; }
+.stack > * + * { margin-top: 8px; }
+.row { display: flex; align-items: center; }
+.wrap { flex-wrap: wrap; }
+.gap { gap: 8px; }
+.between { justify-content: space-between; }
+.grow { flex: 1 1 140px; }
+.plain { list-style: none; margin: 0; padding: 0; }
+.small { font-size: 0.85rem; }
+.muted { color: var(--muted); }
+.bad-text { color: var(--bad); }
+.warn-text { color: var(--warn); }
+.note { background: var(--bg); border-radius: 6px; padding: 4px 8px; }
+.foot { margin-top: 24px; text-align: center; }
+
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; border-radius: 8px; border: 1px solid var(--border); background: var(--card); padding: 6px 12px; }
+button:disabled { opacity: 0.5; cursor: default; }
+button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+button.secondary { background: transparent; border-color: var(--accent); color: var(--accent); }
+button.link { border: 0; background: none; padding: 2px 4px; color: var(--accent); }
+button.small-btn { padding: 3px 10px; font-size: 0.85rem; }
+button.wide { width: 100%; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+input[type="text"], input[type="search"], input[type="time"], select {
+  background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; min-height: 38px; max-width: 100%;
+}
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field input, .field select { width: 100%; min-width: 0; }
+.field > span { font-size: 0.85rem; color: var(--muted); }
+.check { display: inline-flex; align-items: center; gap: 6px; }
+fieldset { min-width: 0; }
+legend { font-weight: bold; padding: 0 4px; }
+input[type="range"] { width: 100%; }
+
+.tabs { display: flex; gap: 4px; position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 6px 0; margin-bottom: 8px; }
+.tab { flex: 1 1 0; min-width: 0; border-radius: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 6px 4px; font-size: 0.9rem; }
+.tab.active { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.badge { display: inline-block; min-width: 1.4em; margin-inline-start: 4px; border-radius: 999px; background: var(--bg); color: var(--fg); font-size: 0.75rem; }
+.scenario-bar select { min-height: 32px; padding: 2px 6px; }
+
+.tag { display: inline-block; border: 1px solid var(--border); border-radius: 999px; padding: 0 8px; font-size: 0.8rem; }
+.tag.bad { border-color: var(--bad); color: var(--bad); }
+.tag.warn { border-color: var(--warn); color: var(--warn); }
+
+.course { padding: 10px 12px; }
+.course.in-plan { border-color: var(--accent); }
+.course-head { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+.course-title { display: flex; flex-direction: column; align-items: flex-start; text-align: start; color: var(--fg); }
+.course-name { font-weight: bold; }
+.groups > li { border-top: 1px solid var(--border); padding: 8px 0; }
+.groups > li.picked { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.group-details ul { margin: 4px 0; }
+
+.course-row { border-inline-start: 6px solid var(--border); padding-inline-start: 8px; }
+.course-row select { width: 100%; margin-top: 4px; }
+
+/* FR-40 weekly table */
+.week { margin-top: 4px; font-size: 0.75rem; }
+.week-head, .week-body { display: grid; }
+.week-head span { text-align: center; color: var(--muted); padding-bottom: 2px; }
+.week-body { position: relative; }
+.week-hours { position: relative; }
+.week-hours span { position: absolute; inset-inline-end: 4px; transform: translateY(-50%); color: var(--muted); }
+.week-day {
+  position: relative; border-inline-start: 1px solid var(--border);
+  background-image: linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+}
+.block {
+  position: absolute; overflow: hidden; border-radius: 6px; padding: 1px 3px; color: var(--fg);
+  border: 1px solid color-mix(in srgb, var(--fg) 15%, transparent); line-height: 1.3;
+  display: flex; flex-direction: column;
+}
+.block.partial { background-image: repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in srgb, var(--fg) 8%, transparent) 6px 8px) !important; }
+.block.conflict { border: 2px solid var(--bad); }
+.block-name { font-weight: bold; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow-wrap: anywhere; }
+.block-time { color: var(--muted); white-space: nowrap; }
+.mark { position: absolute; inset-inline-end: 2px; top: 1px; font-weight: bold; color: var(--accent); }
+
+/* FR-41 exams */
+.exams { list-style: none; margin: 0; padding: 0; }
+.exams li { display: flex; flex-wrap: wrap; align-items: center; gap: 0 8px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.exams li .exam-date { font-weight: bold; }
+.exams li .exam-time { color: var(--muted); }
+.exams li .exam-name { flex-basis: 100%; padding-inline-start: 18px; }
+.exams li.conflict .exam-date { color: var(--bad); }
+.exams li.same-day .exam-date, .exams li.close .exam-date { color: var(--warn); }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+@media (max-width: 520px) {
+  .week { font-size: 0.66rem; }
+  .block { padding: 1px 2px; }
+  .block-time { display: none; }
+}
+@media (min-width: 700px) {
+  body { font-size: 16px; }
+  .week { font-size: 0.8rem; }
+}
