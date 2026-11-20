@@ -190,3 +190,71 @@ a { color: var(--accent); }
 .block-name { flex-shrink: 0; -webkit-line-clamp: 2; }
 .block-detail { font-size: .75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .block-time { flex-shrink: 0; }
+
+/* Refined planner surfaces and restrained interaction feedback. */
+:root {
+  --bg: #f2f6f5;
+  --card: #ffffff;
+  --border: #d6e3e0;
+}
+:root[data-theme="dark"] {
+  --bg: #101516;
+  --card: #1a2223;
+  --border: #354748;
+  --accent: #80dfc7;
+}
+body {
+  background: radial-gradient(ellipse at 50% -15%, color-mix(in srgb, var(--accent) 12%, var(--bg)), var(--bg) 45%);
+}
+.app { max-width: 1320px; }
+.topbar { padding-block: 8px; }
+.brand-mark { box-shadow: 0 8px 22px #0d5c4930; }
+.hero {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(120deg, #102e30, #185a4e 72%, #277e6c);
+  box-shadow: 0 15px 35px #0b3d3420;
+}
+.hero::after {
+  content: "";
+  position: absolute;
+  width: 230px;
+  height: 230px;
+  inset-inline-end: 25%;
+  top: -150px;
+  border: 1px solid #ffffff22;
+  border-radius: 50%;
+  box-shadow: 0 0 0 40px #ffffff08, 0 0 0 80px #ffffff06;
+  pointer-events: none;
+}
+.hero > * { position: relative; z-index: 1; }
+.card, .entry-card {
+  box-shadow: 0 8px 26px #183c3510;
+}
+.tabs { box-shadow: 0 8px 20px #183c3512; }
+.tab.active { box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 25%, transparent); }
+button, input, select {
+  transition: border-color .18s ease, background-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+input[type="search"]:focus, input[type="text"]:focus, select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.course { transition: border-color .2s ease, box-shadow .2s ease; }
+.week-scroll { border-radius: 12px; }
+.week-head { border-bottom: 2px solid var(--accent); }
+.block { box-shadow: 0 2px 8px #00000012; }
+@media (hover: hover) {
+  button:not(:disabled):hover { border-color: var(--accent); }
+  button.primary:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 7px 18px color-mix(in srgb, var(--accent) 30%, transparent); }
+  .course:hover { border-color: var(--accent); box-shadow: 0 10px 25px #183c3518; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .entry-card, .hero { animation: reveal .42s ease-out both; }
+  .block { animation: block-appear .25s ease-out both; }
+  @keyframes reveal { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes block-appear { from { opacity: 0; } to { opacity: 1; } }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+}
