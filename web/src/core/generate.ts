@@ -1,6 +1,6 @@
 /** Generate and rank every valid combination (FR-30 to FR-33, BR-1 to BR-8). */
 
-import { groupsConflict, sessionInBlock, type TimeBlock } from "./conflict";
+import { examsConflict, groupsConflict, sessionInBlock, type TimeBlock } from "./conflict";
 import { genderAllowed, type UnitLimits } from "./rules";
 import {
   DEFAULT_PREFERENCES,
@@ -37,6 +37,9 @@ export interface GenerateInput {
   limits: UnitLimits;
   gender?: "male" | "female" | null;
   blocks?: readonly TimeBlock[];
+  /** Allow weekly class overlaps, while retaining exam conflicts. */
+  allowClassConflicts?: boolean;
+  excludedTeachers?: readonly string[];
   preferences?: Partial<Preferences>;
   /** FR-32, default 500. */
   maxResults?: number;
@@ -110,7 +113,7 @@ export function generate(input: GenerateInput): GenerateResult {
     const ok: number[] = [];
     for (const g of all) {
       if (choice.locked != null && g.code !== choice.locked) counts.notLocked++;
-      else if (choice.excluded?.includes(g.code)) counts.excluded++;
+      else if (choice.excluded?.includes(g.code) || input.excludedTeachers?.includes(g.teacher)) counts.excluded++;
       else if (!genderAllowed(g, input.gender ?? null)) counts.gender++;
       else if (input.blocks?.some((b) => g.sessions.some((s) => sessionInBlock(s, b)))) counts.blocked++;
       else ok.push(pool.push(g) - 1);
@@ -136,7 +139,7 @@ export function generate(input: GenerateInput): GenerateResult {
   const conflictsWith: number[][] = Array.from({ length: n }, () => []);
   for (let i = 0; i < n; i++)
     for (let j = i + 1; j < n; j++)
-      if (pool[i]!.course !== pool[j]!.course && groupsConflict(pool[i]!, pool[j]!)) {
+      if (pool[i]!.course !== pool[j]!.course && (input.allowClassConflicts ? pool[i]!.exams.some((a) => pool[j]!.exams.some((b) => examsConflict(a, b))) : groupsConflict(pool[i]!, pool[j]!))) {
         conflictsWith[i]!.push(j);
         conflictsWith[j]!.push(i);
       }

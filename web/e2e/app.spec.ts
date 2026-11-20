@@ -12,7 +12,7 @@ test("FR-48: search across all courses accepts Arabic letters and Persian digits
   await tab(page, /دروس/).click();
   await page.getByRole("searchbox").fill("رياضي");
   await expect(page.locator("li.course .course-name").first()).toContainText("ریاضی");
-  await expect(page.locator("section p.muted.small")).toHaveText(/^[۰-۹]+\+? درس$/);
+  await expect(page.locator("section p.search-count")).toHaveText(/^[۰-۹]+\+? درس$/);
 });
 
 test("FR-47, FR-42, FR-40, FR-44: pick a group, see it in the week, keep it after reload", async ({ page }) => {

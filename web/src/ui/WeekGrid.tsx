@@ -55,10 +55,12 @@ export function WeekGrid({ groups, colorOf }: { groups: Group[]; colorOf: (cours
                       width: `${100 / b.lanes}%`,
                       background: courseColor(colorOf(b.group.course)),
                     }}
-                    title={`${fa(b.group.name)} — ${fa(b.session.start)}–${fa(b.session.end)}${extra ? ` — ${extra}` : ""}${b.session.place ? ` — ${fa(b.session.place)}` : ""}`}
+                    title={`${fa(b.group.name)} — ${fa(b.session.start)}–${fa(b.session.end)}${extra ? ` — ${extra}` : ""}${b.group.teacher ? ` — ${fa(b.group.teacher)}` : ""}${b.session.place ? ` — ${fa(b.session.place)}` : ""}`}
                   >
                     {b.mark && <span className="mark">{b.mark}</span>}
                     <span className="block-name">{fa(b.group.name)}</span>
+                    {b.group.teacher && <span className="block-detail">{fa(b.group.teacher)}</span>}
+                    {b.session.place && <span className="block-detail">{fa(b.session.place)}</span>}
                     <span className="block-time">
                       {fa(b.session.start)}–{fa(b.session.end)}
                     </span>

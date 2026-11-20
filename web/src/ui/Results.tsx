@@ -2,6 +2,8 @@ import { t, tr } from "../lib/i18n";
 /** FR-30..FR-34: generated combinations, best first, with each preference's share. */
 
 import { useState } from "react";
+import { findConflicts } from "../core/conflict";
+import { conflictText } from "../lib/labels";
 import type { Group } from "../core/types";
 import type { TermIndex } from "../app/termIndex";
 import type { WorkerResult } from "../worker/generate.worker";
@@ -33,6 +35,7 @@ export function Results({
   onRun,
   onApply,
   canRun,
+  manualGroups,
 }: {
   gen: GenState;
   index: TermIndex;
@@ -41,6 +44,7 @@ export function Results({
   onRun: () => void;
   onApply: (groups: Group[]) => void;
   canRun: boolean;
+  manualGroups: Group[];
 }) {
   const [shown, setShown] = useState(PAGE);
   const [open, setOpen] = useState<number | null>(0);
@@ -58,7 +62,7 @@ export function Results({
   if (gen.status === "running") {
     return (
       <section className="card stack" aria-busy="true">
-        <p>{t("در حال ساختن همه ترکیب‌های بدون تداخل…")}</p>
+        <p>{tr("در حال ساختن ترکیب‌ها…", "Generating schedules…", "جارٍ إنشاء الجداول…")}</p>
         <button className="secondary" onClick={onCancel}>
           {t("لغو")}
         </button>
@@ -118,7 +122,7 @@ export function Results({
                   .join("، ") || t("بدون جریمه")}
               </p>
               <p className="small">{groups.map((g) => `${fa(g.name)} (${fa(g.group)})`).join("، ")}</p>
-              {open === i && <WeekGrid groups={groups} colorOf={colorOf} />}
+              {open === i && <><WeekGrid groups={[...groups, ...manualGroups]} colorOf={colorOf} />{findConflicts([...groups, ...manualGroups]).conflicts.map((conflict, n) => <p className="bad-text small" key={n}>{conflictText(conflict)}</p>)}</>}
             </li>
           );
         })}

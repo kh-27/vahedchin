@@ -1,11 +1,12 @@
 import { setLanguage, t, tr, type Language } from "../lib/i18n";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
-import { active, generateInput, initialState, pickProblems, reducer, type AppState } from "../app/scenario";
+import { active, generateInput, initialState, manualEventGroup, pickProblems, reducer, type AppState } from "../app/scenario";
 import { runGenerate, type Running } from "../app/runGenerate";
 import type { TermIndex } from "../app/termIndex";
 import { useTerm } from "../app/useTerm";
 import { useInstallPrompt, useOnline } from "../app/usePwa";
 import { Backup } from "./Backup";
+import { Directory118 } from "./Directory118";
 import { loadState, persist, saveState } from "../storage/db";
 import { fa, faReportTime } from "../lib/text";
 import { Browse } from "./Browse";
@@ -13,12 +14,13 @@ import { Plan } from "./Plan";
 import { Results, type GenState } from "./Results";
 import { Settings } from "./Settings";
 
-type Tab = "courses" | "plan" | "results" | "settings";
+type Tab = "courses" | "plan" | "results" | "settings" | "directory";
 const TABS: { id: Tab; label: string }[] = [
   { id: "courses", label: "دروس" },
   { id: "plan", label: "برنامه" },
   { id: "results", label: "چیدن خودکار" },
   { id: "settings", label: "تنظیمات" },
+  { id: "directory", label: "۱۱۸" },
 ];
 
 export function App() {
@@ -201,6 +203,7 @@ function Ready({ index, language, onLanguage }: { index: TermIndex; language: La
       {tab === "results" && (
         <Results
           gen={gen}
+          manualGroups={scenario.manualEvents.map(manualEventGroup)}
           index={index}
           colorOf={colorOf}
           canRun={scenario.courses.length > 0}
@@ -212,9 +215,10 @@ function Ready({ index, language, onLanguage }: { index: TermIndex; language: La
           }}
         />
       )}
+      {tab === "directory" && <Directory118 />}
       {tab === "settings" && (
         <>
-          <Settings key={scenario.id} settings={scenario.settings} dispatch={dispatch} />
+          <Settings key={scenario.id} settings={scenario.settings} dispatch={dispatch} teachers={[...new Set(data.groups.map((g) => g.teacher).filter(Boolean))].sort((a, b) => a.localeCompare(b, "fa"))} />
           <Backup state={state} dispatch={dispatch} />
         </>
       )}

@@ -289,3 +289,22 @@ describe("NFR-03: equals brute force on small inputs", () => {
     );
   });
 });
+
+
+describe("final semester and instructor exclusions", () => {
+  it("allows class overlaps only when requested, but still rejects exam overlaps", () => {
+    const a = group("9000001_01", [session(0, "08:00", "10:00")]);
+    const b = group("9000002_01", [session(0, "09:00", "11:00")]);
+    const input = { groups: [a, b], courses: [req(a.course), req(b.course)], limits };
+    expect(generate(input).total).toBe(0);
+    expect(generate({ ...input, allowClassConflicts: true }).total).toBe(1);
+    const sameExam = exam("1405/10/10", "08:00", "10:00");
+    expect(generate({ ...input, groups: [{ ...a, exams: [sameExam] }, { ...b, exams: [sameExam] }], allowClassConflicts: true }).total).toBe(0);
+  });
+  it("excludes selected instructors without excluding other groups", () => {
+    const a = group("9000001_01", [], [], { teacher: "الف" });
+    const b = group("9000001_02", [], [], { teacher: "ب" });
+    const result = generate({ groups: [a, b], courses: [req(a.course)], limits, excludedTeachers: ["الف"] });
+    expect(result.results.map(codes)).toEqual([b.code]);
+  });
+});

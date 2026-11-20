@@ -14,7 +14,7 @@ export function GroupDetails({ g, reportDate }: { g: Group; reportDate: string }
         <span>{g.teacher || t("استاد نامشخص")}</span>
         <span className="tag">{t(GENDER[g.gender])}</span>
         <span className={`tag${full ? " bad" : ""}`} title={`${tr("ثبت‌نام تا زمان تهیه داده", "Enrolment as of the report", "التسجيل حتى تاريخ التقرير")} (${fa(reportDate)})`}>
-          {fa(g.registered)} / {fa(g.capacity)}
+          {fa(g.registered)} / {fa(g.capacity)} — {tr("باقی‌مانده", "Remaining", "المتبقي")}: {fa(Math.max(0, g.capacity - g.registered))}
           {full && tr("، پر", ", full", "، مكتمل")}
         </span>
         {g.waitlist > 0 && <span className="tag">{tr("انتظار", "Waitlist", "قائمة الانتظار")} {fa(g.waitlist)}</span>}

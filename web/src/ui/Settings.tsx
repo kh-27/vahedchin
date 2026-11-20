@@ -31,7 +31,7 @@ function parseNumber(s: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-export function Settings({ settings, dispatch }: { settings: S; dispatch: (a: Action) => void }) {
+export function Settings({ settings, dispatch, teachers }: { settings: S; dispatch: (a: Action) => void; teachers: string[] }) {
   const set = settings;
   let limitsText: string;
   try {
@@ -84,6 +84,19 @@ export function Settings({ settings, dispatch }: { settings: S; dispatch: (a: Ac
         ))}
       </fieldset>
 
+      <fieldset className="card stack">
+        <legend>{tr("ترم آخر", "Final semester", "الفصل الأخير")}</legend>
+        <label className="check"><input type="checkbox" checked={set.allowClassConflicts} onChange={(e) => patch({ allowClassConflicts: e.target.checked })} />{tr("اجازه تداخل کلاس‌ها در چیدمان خودکار", "Allow overlapping classes in generated schedules", "السماح بتعارض المحاضرات في الجداول المقترحة")}</label>
+        <p className="small muted">{tr("تداخل کلاس‌ها همچنان در برنامه مشخص می‌شود؛ تداخل امتحان مجاز نیست. تأیید نهایی با دانشگاه است.", "Class conflicts remain visible; exam conflicts are not allowed. University approval may be required.", "تظل تعارضات المحاضرات ظاهرة؛ لا يُسمح بتعارض الامتحانات. قد تتطلب موافقة الجامعة.")}</p>
+      </fieldset>
+      <fieldset className="card stack">
+        <legend>{tr("انتخاب استادها", "Instructor selection", "اختيار الأساتذة")}</legend>
+        <p className="small muted">{tr("استاد ترجیحی در رتبه‌بندی اثر دارد؛ استاد کنارگذاشته‌شده در چیدمان خودکار استفاده نمی‌شود.", "Preferred instructors affect ranking; excluded instructors are omitted from generated schedules.", "يؤثر الأساتذة المفضلون في الترتيب؛ ويُستبعد الآخرون من الجداول المقترحة.")}</p>
+        <label className="field"><span>{tr("استاد ترجیحی", "Preferred instructor", "الأستاذ المفضل")}</span><select value="" onChange={(e) => { const value = e.target.value; if (value && !set.prefs.preferredTeachers.includes(value)) dispatch({ type: "prefs", patch: { preferredTeachers: [...set.prefs.preferredTeachers, value], teacher: set.prefs.teacher || 3 } }); }}><option value="">{t("انتخاب کنید")}</option>{teachers.map((name) => <option key={name} value={name}>{name}</option>)}</select></label>
+        <div className="row wrap gap">{set.prefs.preferredTeachers.map((name) => <button type="button" key={name} onClick={() => dispatch({ type: "prefs", patch: { preferredTeachers: set.prefs.preferredTeachers.filter((x) => x !== name) } })}>{name} ×</button>)}</div>
+        <label className="field"><span>{tr("استادانی که نمی‌خواهم", "Excluded instructors", "الأساتذة المستبعدون")}</span><select value="" onChange={(e) => { const value = e.target.value; if (value && !set.excludedTeachers.includes(value)) patch({ excludedTeachers: [...set.excludedTeachers, value] }); }}><option value="">{t("انتخاب کنید")}</option>{teachers.map((name) => <option key={name} value={name}>{name}</option>)}</select></label>
+        <div className="row wrap gap">{set.excludedTeachers.map((name) => <button type="button" key={name} onClick={() => patch({ excludedTeachers: set.excludedTeachers.filter((x) => x !== name) })}>{name} ×</button>)}</div>
+      </fieldset>
       <BlocksEditor settings={set} dispatch={dispatch} />
 
       <fieldset className="card stack">
@@ -100,19 +113,6 @@ export function Settings({ settings, dispatch }: { settings: S; dispatch: (a: Ac
         <label className="field">
           <span>{t("ساعت «صبح زود» (کلاس قبل از این ساعت جریمه می‌شود)")}</span>
           <input type="time" value={set.prefs.noClassBefore ?? ""} onChange={(e) => dispatch({ type: "prefs", patch: { noClassBefore: e.target.value || null } })} />
-        </label>
-        <label className="field">
-          <span>{t("استادهای ترجیحی (با «،» جدا کنید، همان‌طور که در فهرست دروس آمده)")}</span>
-          <input
-            type="text"
-            defaultValue={set.prefs.preferredTeachers.join("، ")}
-            onBlur={(e) =>
-              dispatch({
-                type: "prefs",
-                patch: { preferredTeachers: e.target.value.split(/[،,]/).map((t) => t.trim()).filter(Boolean) },
-              })
-            }
-          />
         </label>
       </fieldset>
 

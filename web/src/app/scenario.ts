@@ -4,7 +4,7 @@ import type { TimeBlock } from "../core/conflict";
 import type { CourseChoice, GenerateInput } from "../core/generate";
 import { unitLimits, type Standing } from "../core/rules";
 import { DEFAULT_PREFERENCES, type Preferences } from "../core/score";
-import type { Group } from "../core/types";
+import type { Day, Group } from "../core/types";
 
 export interface ScenarioCourse {
   course: string;
@@ -20,15 +20,22 @@ export interface Settings {
   manualMax: number | null;
   gender: "male" | "female" | null;
   blocks: TimeBlock[];
+  allowClassConflicts: boolean;
+  excludedTeachers: string[];
   prefs: Preferences;
   minExamGapDays: number | null;
 }
+
+export interface ManualEvent { id: string; name: string; day: Day; start: string; end: string; place: string; }
 
 export interface Scenario {
   id: string;
   name: string;
   term: string;
   courses: ScenarioCourse[];
+  manualEvents: ManualEvent[];
+  /** Allowed group codes from report 212; null means no report filter. */
+  reportGroups: string[] | null;
   /** The schedule: course -> chosen group code (manual or from a generated result). */
   picks: Record<string, string>;
   /** Fingerprint of each picked group when it was picked (FR-71). */
@@ -49,6 +56,8 @@ export const DEFAULT_SETTINGS: Settings = {
   manualMax: null,
   gender: null,
   blocks: [],
+  allowClassConflicts: false,
+  excludedTeachers: [],
   prefs: DEFAULT_PREFERENCES,
   minExamGapDays: null,
 };
@@ -60,7 +69,7 @@ export function newId(): string {
 }
 
 export function createScenario(term: string, name: string, settings: Settings = DEFAULT_SETTINGS): Scenario {
-  return { id: newId(), name, term, courses: [], picks: {}, snapshot: {}, settings, updatedAt: Date.now() };
+  return { id: newId(), name, term, courses: [], manualEvents: [], reportGroups: null, picks: {}, snapshot: {}, settings, updatedAt: Date.now() };
 }
 
 export function initialState(term: string): AppState {
@@ -74,6 +83,9 @@ export function fingerprint(g: Group): string {
 }
 
 export type Action =
+  | { type: "setReportGroups"; codes: string[] | null }
+  | { type: "addManualEvent"; event: ManualEvent }
+  | { type: "removeManualEvent"; id: string }
   | { type: "addCourse"; course: string }
   | { type: "removeCourse"; course: string }
   | { type: "setRequired"; course: string; required: boolean }
@@ -117,6 +129,9 @@ function withoutKey<T>(rec: Record<string, T>, key: string): Record<string, T> {
 
 export function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
+    case "setReportGroups": return update(state, (s) => ({ ...s, reportGroups: action.codes }));
+    case "addManualEvent": return update(state, (s) => ({ ...s, manualEvents: [...s.manualEvents, action.event] }));
+    case "removeManualEvent": return update(state, (s) => ({ ...s, manualEvents: s.manualEvents.filter((event) => event.id !== action.id) }));
     case "addCourse":
       return update(state, (s) =>
         s.courses.some((c) => c.course === action.course)
@@ -229,11 +244,13 @@ export function generateInput(s: Scenario, groups: readonly Group[]): GenerateIn
   }));
   const wanted = new Set(courses.map((c) => c.course));
   return {
-    groups: groups.filter((g) => wanted.has(g.course)),
+    groups: groups.filter((g) => wanted.has(g.course) && (!s.reportGroups || s.reportGroups.includes(g.code))),
     courses,
     limits: unitLimits({ gpa: set.gpa, standing: set.standing, manualMin: set.manualMin, manualMax: set.manualMax }),
     gender: set.gender,
-    blocks: set.blocks,
+    blocks: [...set.blocks, ...s.manualEvents.map(({ day, start, end }) => ({ day, start, end }))],
+    allowClassConflicts: set.allowClassConflicts,
+    excludedTeachers: set.excludedTeachers,
     preferences: set.prefs,
   };
 }
@@ -324,6 +341,8 @@ export function normalizeScenario(x: unknown): Scenario | null {
     name: x.name,
     term: x.term,
     courses,
+    manualEvents: Array.isArray(x.manualEvents) ? x.manualEvents.filter((v): v is ManualEvent => isObj(v) && typeof v.id === "string" && typeof v.name === "string" && v.name.length > 0 && Number.isInteger(v.day) && (v.day as number) >= 0 && (v.day as number) <= 6 && typeof v.start === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(v.start) && typeof v.end === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(v.end) && v.start < v.end && typeof v.place === "string") : [],
+    reportGroups: Array.isArray(x.reportGroups) ? x.reportGroups.filter((code): code is string => typeof code === "string" && /^\d{7}_\d{2}$/.test(code)) : null,
     picks: x.picks,
     snapshot: (x.snapshot as Record<string, string> | undefined) ?? {},
     settings: {
@@ -333,6 +352,8 @@ export function normalizeScenario(x: unknown): Scenario | null {
       manualMax: numOrNull(st.manualMax),
       gender,
       blocks,
+      allowClassConflicts: st.allowClassConflicts === true,
+      excludedTeachers: Array.isArray(st.excludedTeachers) ? st.excludedTeachers.filter((v): v is string => typeof v === "string") : [],
       minExamGapDays: numOrNull(st.minExamGapDays),
       prefs: {
         fewerDays: weight("fewerDays"),
@@ -355,4 +376,9 @@ export function normalizeState(x: unknown): AppState | null {
   if (scenarios.length === 0) return null;
   const activeId = typeof x.activeId === "string" && scenarios.some((s) => s.id === x.activeId) ? x.activeId : scenarios[0]!.id;
   return { scenarios, activeId };
+}
+
+/** Convert a user's weekly activity to a zero-credit block for rendering and conflict detection. */
+export function manualEventGroup(event: ManualEvent): Group {
+  return { code: `manual_${event.id}`, course: `manual_${event.id}`, group: "", name: event.name, units: 0, practicalUnits: 0, capacity: 0, registered: 0, waitlist: 0, gender: "mixed", teacher: "", sessions: [{kind: "problem_solving", type: "theory", day: event.day, date: null, start: event.start, end: event.end, week: "all", half: null, place: event.place, weekNumber: null}], exams: [], notes: "", otherCenters: false, emergencyDrop: false, department: 0 };
 }

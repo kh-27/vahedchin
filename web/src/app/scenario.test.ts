@@ -100,3 +100,28 @@ describe("generateInput", () => {
     expect(input.courses).toEqual([{ course: "1000001", required: true, excluded: ["1000001_02"], locked: null }]);
   });
 });
+
+
+describe("manual activities", () => {
+  it("persists events in exported scenarios and blocks them in generation", async () => {
+    const event = { id: "event-1", name: "تمرین", day: 0 as const, start: "08:00", end: "10:00", place: "کلاس ۱" };
+    const state = run([{ type: "addManualEvent", event }]);
+    const { normalizeState } = await import("./scenario");
+    const restored = normalizeState(JSON.parse(JSON.stringify(state)));
+    expect(restored && active(restored).manualEvents).toEqual([event]);
+    expect(generateInput(active(state), [g1]).blocks).toContainEqual({ day: 0, start: "08:00", end: "10:00" });
+    expect(active(run([{ type: "removeManualEvent", id: event.id }], state)).manualEvents).toEqual([]);
+  });
+});
+
+
+describe("report 212 group filter", () => {
+  it("limits generated groups to matched report codes and survives reload", async () => {
+    let state = run([{ type: "addCourse", course: "1000001" }, { type: "setReportGroups", codes: [g2.code] }]);
+    const { normalizeState } = await import("./scenario");
+    state = normalizeState(JSON.parse(JSON.stringify(state)))!;
+    expect(generateInput(active(state), [g1, g2]).groups.map((g) => g.code)).toEqual([g2.code]);
+    state = run([{ type: "setReportGroups", codes: null }], state);
+    expect(generateInput(active(state), [g1, g2]).groups).toHaveLength(2);
+  });
+});
