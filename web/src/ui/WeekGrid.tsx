@@ -1,3 +1,4 @@
+import { t, tr } from "../lib/i18n";
 /** FR-40: weekly table with continuous hours, a color per course and odd/even marks. */
 
 import { DAY_NAMES } from "../core/time";
@@ -14,18 +15,18 @@ export function courseColor(index: number): string {
 
 export function WeekGrid({ groups, colorOf }: { groups: Group[]; colorOf: (course: string) => number }) {
   const layout = weekLayout(groups);
-  if (!layout) return <p className="muted">هنوز کلاسی در این برنامه نیست.</p>;
+  if (!layout) return <p className="muted">{t("هنوز کلاسی در این برنامه نیست.")}</p>;
   const { days, t0, t1, blocks } = layout;
   const hours = Array.from({ length: (t1 - t0) / 60 + 1 }, (_, i) => t0 / 60 + i);
   const columns = `2.2rem repeat(${days.length}, 1fr)`;
 
   return (
-    <div className="week" role="table" aria-label="جدول هفتگی">
+    <div className="week" role="table" aria-label={t("جدول هفتگی")}>
       <div className="week-head" role="row" style={{ gridTemplateColumns: columns }}>
         <span />
         {days.map((d) => (
           <span key={d} role="columnheader">
-            {DAY_NAMES[d]}
+            {t(DAY_NAMES[d]!)}
           </span>
         ))}
       </div>
@@ -54,7 +55,7 @@ export function WeekGrid({ groups, colorOf }: { groups: Group[]; colorOf: (cours
                       width: `${100 / b.lanes}%`,
                       background: courseColor(colorOf(b.group.course)),
                     }}
-                    title={`${fa(b.group.name)} — ${fa(b.session.start)} تا ${fa(b.session.end)}${extra ? ` — ${extra}` : ""}${b.session.place ? ` — ${fa(b.session.place)}` : ""}`}
+                    title={`${fa(b.group.name)} — ${fa(b.session.start)}–${fa(b.session.end)}${extra ? ` — ${extra}` : ""}${b.session.place ? ` — ${fa(b.session.place)}` : ""}`}
                   >
                     {b.mark && <span className="mark">{b.mark}</span>}
                     <span className="block-name">{fa(b.group.name)}</span>

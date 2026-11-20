@@ -1,3 +1,4 @@
+import { t, tr } from "../lib/i18n";
 /** FR-07: save all scenarios to a JSON file, and add scenarios from such a file. */
 
 import { useRef, useState } from "react";
@@ -19,29 +20,29 @@ export function Backup({ state, dispatch }: { state: AppState; dispatch: (a: Act
     try {
       const scenarios = parseImport(await file.text());
       dispatch({ type: "importScenarios", scenarios });
-      setMessage({ ok: true, text: `${fa(scenarios.length)} برنامه اضافه شد.` });
+      setMessage({ ok: true, text: `${fa(scenarios.length)} ${tr("برنامه اضافه شد.", "schedules imported.", "جداول مستوردة.")}` });
     } catch (e) {
-      setMessage({ ok: false, text: e instanceof ImportError ? e.message : "خواندن فایل ممکن نشد." });
+      setMessage({ ok: false, text: e instanceof ImportError ? e.message : t("خواندن فایل ممکن نشد.") });
     }
   };
 
   return (
     <fieldset className="card stack">
-      <legend>پشتیبان و انتقال به دستگاه دیگر</legend>
-      <p className="small muted">برنامه‌ها فقط در همین مرورگر ذخیره‌اند. برای انتقال یا پشتیبان، فایل بگیرید و در دستگاه دیگر وارد کنید.</p>
+      <legend>{t("پشتیبان و انتقال به دستگاه دیگر")}</legend>
+      <p className="small muted">{t("برنامه‌ها فقط در همین مرورگر ذخیره‌اند. برای انتقال یا پشتیبان، فایل بگیرید و در دستگاه دیگر وارد کنید.")}</p>
       <div className="row wrap gap">
         <button className="secondary" onClick={save}>
-          دانلود همه برنامه‌ها ({fa(state.scenarios.length)})
+          {tr("دانلود همه برنامه‌ها", "Download all schedules", "تنزيل جميع الجداول")} ({fa(state.scenarios.length)})
         </button>
         <button className="secondary" onClick={() => input.current?.click()}>
-          ورود از فایل
+          {t("ورود از فایل")}
         </button>
         <input
           ref={input}
           type="file"
           accept="application/json,.json"
           hidden
-          aria-label="فایل برنامه‌ها"
+          aria-label={t("فایل برنامه‌ها")}
           onChange={(e) => {
             const f = e.target.files?.[0];
             if (f) void load(f);

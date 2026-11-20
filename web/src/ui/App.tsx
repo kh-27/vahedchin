@@ -1,3 +1,4 @@
+import { setLanguage, t, tr, type Language } from "../lib/i18n";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { active, generateInput, initialState, pickProblems, reducer, type AppState } from "../app/scenario";
 import { runGenerate, type Running } from "../app/runGenerate";
@@ -21,17 +22,26 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 export function App() {
+  const [language, changeLanguage] = useState<Language>(() => {
+    try { const saved = localStorage.getItem("language"); return saved === "en" || saved === "ar" ? saved : "fa"; } catch { return "fa"; }
+  });
+  setLanguage(language);
+  useEffect(() => {
+    document.documentElement.lang = language;
+    document.documentElement.dir = language === "en" ? "ltr" : "rtl";
+    try { localStorage.setItem("language", language); } catch { /* private browsing */ }
+  }, [language]);
   const term = useTerm();
-  if (term.status === "loading") return <Shell>در حال دریافت داده ارائه دروس…</Shell>;
-  if (term.status === "error") return <Shell>داده دریافت نشد: {term.message}</Shell>;
-  return <Ready index={term.index} />;
+  if (term.status === "loading") return <Shell>{t("در حال دریافت داده ارائه دروس…")}</Shell>;
+  if (term.status === "error") return <Shell>{tr("داده دریافت نشد:", "Could not load data:", "تعذر تحميل البيانات:")} {term.message}</Shell>;
+  return <Ready index={term.index} language={language} onLanguage={changeLanguage} />;
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <main className="app">
       <header className="top">
-        <h1>واحدچین</h1>
+        <h1>{t("واحدچین")}</h1>
       </header>
       <p className="card">{children}</p>
     </main>
@@ -55,7 +65,7 @@ function remember(key: string, value: unknown) {
   }
 }
 
-function Ready({ index }: { index: TermIndex }) {
+function Ready({ index, language, onLanguage }: { index: TermIndex; language: Language; onLanguage: (language: Language) => void }) {
   const data = index.data;
   const [state, dispatch] = useReducer(reducer, data.term, initialState);
   const [loaded, setLoaded] = useState(false);
@@ -122,35 +132,35 @@ function Ready({ index }: { index: TermIndex }) {
   return (
     <main className="app">
       <header className="top">
-        <div className="row between wrap gap">
-          <h1>واحدچین</h1>
-          <ScenarioBar state={state} dispatch={dispatch} term={data.term} />
+        <div className="topbar">
+          <div className="brand"><span className="brand-mark" aria-hidden="true">و</span><div><h1>{t("واحدچین")}</h1><span>SEMESTER PLANNER</span></div></div>
+          <div className="row wrap gap"><label className="language-picker"><span className="sr-only">Language / اللغة / زبان</span><select aria-label="Language / اللغة / زبان" value={language} onChange={(event) => onLanguage(event.target.value as Language)}><option value="fa">فارسی</option><option value="en">English</option><option value="ar">العربية</option></select></label><ScenarioBar state={state} dispatch={dispatch} term={data.term} /></div>
         </div>
-        <p className="small muted">
-          {fa(data.termTitle)}، داده گلستان: {faReportTime(data.reportDate, data.reportTime)}
-        </p>
+        <div className="hero">
+          <div><p className="eyebrow">{t("دانشگاه سمنان · برنامه‌ریزی هوشمند")}</p><h2>{t("ترم خودت را با اطمینان بچین.")}</h2><p>{t("دروس را پیدا کن، برنامه‌ها را مقایسه کن و بدون تداخل برای ترم پیش رو آماده شو.")}</p></div>
+          <div className="term-panel"><span>{t("نیمسال جاری")}</span><strong>{fa(data.termTitle)}</strong><small>{t("داده گلستان:")} {faReportTime(data.reportDate, data.reportTime)}</small></div>
+        </div>
       </header>
 
       {!online && (
         <p className="card small" role="status">
-          آفلاین هستید؛ از داده ذخیره‌شده ({faReportTime(data.reportDate, data.reportTime)}) استفاده می‌شود. برنامه‌چینی کار می‌کند.
+          {tr("آفلاین هستید؛ از داده ذخیره‌شده استفاده می‌شود.", "You are offline; using saved data.", "أنت غير متصل؛ تُستخدم البيانات المحفوظة.")} ({faReportTime(data.reportDate, data.reportTime)})
         </p>
       )}
-      {storageError && <p className="card warn-text small">ذخیره در مرورگر کار نکرد؛ برنامه‌ها با بستن صفحه از بین می‌روند. ({storageError})</p>}
+      {storageError && <p className="card warn-text small">{tr("ذخیره در مرورگر کار نکرد؛ برنامه‌ها با بستن صفحه از بین می‌روند.", "Browser storage failed; schedules will be lost when the page closes.", "فشل التخزين في المتصفح؛ ستُفقد الجداول عند إغلاق الصفحة.")} ({storageError})</p>}
       {scenario.term !== data.term && (
-        <p className="card warn-text small">این برنامه برای ترم {fa(scenario.term)} ساخته شده ولی داده فعلی ترم {fa(data.term)} است.</p>
+        <p className="card warn-text small">{tr(`این برنامه برای ترم ${fa(scenario.term)} ساخته شده ولی داده فعلی ترم ${fa(data.term)} است.`, `This schedule is for semester ${fa(scenario.term)}, but current data is for ${fa(data.term)}.`, `هذا الجدول للفصل ${fa(scenario.term)}، لكن البيانات الحالية للفصل ${fa(data.term)}.`)}</p>
       )}
       {problems.length > 0 && (
         <div className="card warn-text small stack" role="alert">
           <p>
-            داده جدید منتشر شده و {fa(problems.length)} گروه انتخاب‌شده شما {problems.some((p) => p.kind === "missing") ? "حذف شده یا " : ""}
-            تغییر کرده است:
+            {tr(`داده جدید منتشر شده و ${fa(problems.length)} گروه انتخاب‌شده شما حذف شده یا تغییر کرده است:`, `New data has been published; ${fa(problems.length)} selected groups have changed or been removed:`, `نُشرت بيانات جديدة؛ تغيرت أو أزيلت ${fa(problems.length)} من مجموعاتك المختارة:`)}
           </p>
           <ul className="plain">
             {problems.map((p) => (
               <li key={p.code}>
-                {index.courses.get(p.course)?.name ?? p.course} (گروه {fa(p.code.split("_")[1] ?? "")}):{" "}
-                {p.kind === "missing" ? "دیگر ارائه نمی‌شود" : "ساعت، امتحان یا استاد عوض شده"}
+                {index.courses.get(p.course)?.name ?? p.course} ({tr("گروه", "Group", "المجموعة")} {fa(p.code.split("_")[1] ?? "")}):{" "}
+                {p.kind === "missing" ? t("دیگر ارائه نمی‌شود") : t("ساعت، امتحان یا استاد عوض شده")}
               </li>
             ))}
           </ul>
@@ -163,16 +173,16 @@ function Ready({ index }: { index: TermIndex }) {
               })
             }
           >
-            دیدم
+            {t("دیدم")}
           </button>
         </div>
       )}
 
-      <nav className="tabs" aria-label="بخش‌ها">
-        {TABS.map((t) => (
-          <button key={t.id} className={tab === t.id ? "tab active" : "tab"} aria-current={tab === t.id ? "page" : undefined} onClick={() => setTab(t.id)}>
-            {t.label}
-            {t.id === "plan" && scenario.courses.length > 0 && <span className="badge">{fa(scenario.courses.length)}</span>}
+      <nav className="tabs" aria-label={t("بخش‌ها")}>
+        {TABS.map((item) => (
+          <button key={item.id} className={tab === item.id ? "tab active" : "tab"} aria-current={tab === item.id ? "page" : undefined} onClick={() => setTab(item.id)}>
+            {t(item.label)}
+            {item.id === "plan" && scenario.courses.length > 0 && <span className="badge">{fa(scenario.courses.length)}</span>}
           </button>
         ))}
       </nav>
@@ -211,14 +221,14 @@ function Ready({ index }: { index: TermIndex }) {
 
       {install && (
         <div className="card row between wrap gap">
-          <span className="small">واحدچین را مثل یک اپ روی گوشی نصب کنید؛ بعد از آن بدون اینترنت هم باز می‌شود.</span>
+          <span className="small">{t("واحدچین را مثل یک اپ روی گوشی نصب کنید؛ بعد از آن بدون اینترنت هم باز می‌شود.")}</span>
           <button className="primary small-btn" onClick={() => void install()}>
-            نصب
+            {t("نصب")}
           </button>
         </div>
       )}
       <footer className="small muted foot">
-        برنامه‌های شما فقط در همین مرورگر ذخیره می‌شود و به هیچ سروری فرستاده نمی‌شود. منبع داده: گزارش ۱۱۰ گلستان دانشگاه سمنان.
+        {t("برنامه‌های شما فقط در همین مرورگر ذخیره می‌شود و به هیچ سروری فرستاده نمی‌شود. منبع داده: گزارش ۱۱۰ گلستان دانشگاه سمنان.")}
       </footer>
     </main>
   );
@@ -228,36 +238,36 @@ function ScenarioBar({ state, dispatch, term }: { state: AppState; dispatch: (a:
   const s = active(state);
   return (
     <div className="row gap scenario-bar">
-      <select aria-label="برنامه" value={s.id} onChange={(e) => dispatch({ type: "switchScenario", id: e.target.value })}>
+      <select aria-label={t("برنامه")} value={s.id} onChange={(e) => dispatch({ type: "switchScenario", id: e.target.value })}>
         {state.scenarios.map((x) => (
           <option key={x.id} value={x.id}>
             {x.name}
           </option>
         ))}
       </select>
-      <button className="link small" onClick={() => dispatch({ type: "newScenario", term, name: `برنامه ${fa(state.scenarios.length + 1)}` })}>
-        جدید
+      <button className="link small" onClick={() => dispatch({ type: "newScenario", term, name: `${t("برنامه")} ${fa(state.scenarios.length + 1)}` })}>
+        {t("جدید")}
       </button>
-      <button className="link small" onClick={() => dispatch({ type: "duplicateScenario", name: `${s.name} (کپی)` })}>
-        کپی
+      <button className="link small" onClick={() => dispatch({ type: "duplicateScenario", name: `${s.name} (${t("کپی")})` })}>
+        {t("کپی")}
       </button>
       <button
         className="link small"
         onClick={() => {
-          const name = window.prompt("نام برنامه", s.name)?.trim();
+          const name = window.prompt(t("نام برنامه"), s.name)?.trim();
           if (name) dispatch({ type: "renameScenario", name });
         }}
       >
-        نام
+        {t("نام")}
       </button>
       {state.scenarios.length > 1 && (
         <button
           className="link small bad-text"
           onClick={() => {
-            if (window.confirm(`«${s.name}» حذف شود؟`)) dispatch({ type: "deleteScenario" });
+            if (window.confirm(tr(`«${s.name}» حذف شود؟`, `Delete “${s.name}”?`, `هل تريد حذف «${s.name}»؟`))) dispatch({ type: "deleteScenario" });
           }}
         >
-          حذف
+          {t("حذف")}
         </button>
       )}
     </div>

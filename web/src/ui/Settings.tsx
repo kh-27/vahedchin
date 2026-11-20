@@ -1,3 +1,4 @@
+import { t, tr } from "../lib/i18n";
 /** FR-23 unit limits, FR-24 blocked times, FR-25 weighted preferences, FR-26 gender, FR-12 exam gap. */
 
 import { useState } from "react";
@@ -35,50 +36,50 @@ export function Settings({ settings, dispatch }: { settings: S; dispatch: (a: Ac
   let limitsText: string;
   try {
     const l = unitLimits({ gpa: set.gpa, standing: set.standing, manualMin: set.manualMin, manualMax: set.manualMax });
-    limitsText = `واحد مجاز: ${fa(l.min)} تا ${fa(l.max)}`;
+    limitsText = `${tr("واحد مجاز", "Allowed credits", "الوحدات المسموحة")}: ${fa(l.min)}–${fa(l.max)}`;
   } catch {
-    limitsText = "مقادیر واحد نامعتبر است.";
+    limitsText = t("مقادیر واحد نامعتبر است.");
   }
   const patch = (p: Partial<S>) => dispatch({ type: "settings", patch: p });
 
   return (
     <section className="stack">
       <fieldset className="card stack">
-        <legend>سقف و کف واحد</legend>
+        <legend>{t("سقف و کف واحد")}</legend>
         {STANDING.map((s) => (
           <label key={s.value} className="check">
             <input type="radio" name="standing" checked={set.gpa === null && set.standing === s.value} onChange={() => patch({ standing: s.value, gpa: null })} />
-            {s.label}
+            {s.value === "normal" ? tr(`عادی (سقف ${fa(MAX_UNITS.normal)})`, `Normal (maximum ${fa(MAX_UNITS.normal)})`, `عادي (الحد الأقصى ${fa(MAX_UNITS.normal)})`) : s.value === "excellent" ? tr(`ممتاز، معدل ≥ ۱۷ (سقف ${fa(MAX_UNITS.excellent)})`, `Excellent, GPA ≥ 17 (maximum ${fa(MAX_UNITS.excellent)})`, `متفوق، المعدل ≥ ١٧ (الحد الأقصى ${fa(MAX_UNITS.excellent)})`) : tr(`مشروط، معدل < ۱۲ (سقف ${fa(MAX_UNITS.probation)})`, `Probation, GPA < 12 (maximum ${fa(MAX_UNITS.probation)})`, `إنذار، المعدل < ١٢ (الحد الأقصى ${fa(MAX_UNITS.probation)})`)}
           </label>
         ))}
         <label className="field">
-          <span>یا معدل ترم قبل</span>
+          <span>{t("یا معدل ترم قبل")}</span>
           <NumberInput value={set.gpa} onChange={(gpa) => patch({ gpa: gpa !== null && gpa >= 0 && gpa <= 20 ? gpa : null })} placeholder="مثلاً ۱۷٫۵" />
         </label>
         <div className="row gap">
           <label className="field grow">
-            <span>کف دستی</span>
+            <span>{t("کف دستی")}</span>
             <NumberInput value={set.manualMin} onChange={(manualMin) => patch({ manualMin })} placeholder="۱۲" />
           </label>
           <label className="field grow">
-            <span>سقف دستی</span>
-            <NumberInput value={set.manualMax} onChange={(manualMax) => patch({ manualMax })} placeholder="خودکار" />
+            <span>{t("سقف دستی")}</span>
+            <NumberInput value={set.manualMax} onChange={(manualMax) => patch({ manualMax })} placeholder={t("خودکار")} />
           </label>
         </div>
         <p className="small">{limitsText}</p>
       </fieldset>
 
       <fieldset className="card stack">
-        <legend>جنسیت</legend>
-        <p className="small muted">گروه‌های مختلط همیشه نشان داده می‌شوند.</p>
+        <legend>{t("جنسیت")}</legend>
+        <p className="small muted">{t("گروه‌های مختلط همیشه نشان داده می‌شوند.")}</p>
         {[
           { v: null, l: "نمایش همه گروه‌ها" },
           { v: "female" as const, l: "خواهران" },
           { v: "male" as const, l: "برادران" },
         ].map((o) => (
-          <label key={o.l} className="check">
+          <label key={t(o.l)} className="check">
             <input type="radio" name="gender" checked={set.gender === o.v} onChange={() => patch({ gender: o.v })} />
-            {o.l}
+            {t(o.l)}
           </label>
         ))}
       </fieldset>
@@ -86,22 +87,22 @@ export function Settings({ settings, dispatch }: { settings: S; dispatch: (a: Ac
       <BlocksEditor settings={set} dispatch={dispatch} />
 
       <fieldset className="card stack">
-        <legend>ترجیحات چیدن خودکار</legend>
-        <p className="small muted">وزن ۰ یعنی مهم نیست؛ ۱۰ یعنی خیلی مهم.</p>
+        <legend>{t("ترجیحات چیدن خودکار")}</legend>
+        <p className="small muted">{t("وزن ۰ یعنی مهم نیست؛ ۱۰ یعنی خیلی مهم.")}</p>
         {WEIGHTS.map((w) => (
           <label key={w.key} className="field">
             <span>
-              {w.label}: {fa(set.prefs[w.key])}
+              {t(w.label)}: {fa(set.prefs[w.key])}
             </span>
             <input type="range" min={0} max={10} step={1} value={set.prefs[w.key]} onChange={(e) => dispatch({ type: "prefs", patch: { [w.key]: Number(e.target.value) } })} />
           </label>
         ))}
         <label className="field">
-          <span>ساعت «صبح زود» (کلاس قبل از این ساعت جریمه می‌شود)</span>
+          <span>{t("ساعت «صبح زود» (کلاس قبل از این ساعت جریمه می‌شود)")}</span>
           <input type="time" value={set.prefs.noClassBefore ?? ""} onChange={(e) => dispatch({ type: "prefs", patch: { noClassBefore: e.target.value || null } })} />
         </label>
         <label className="field">
-          <span>استادهای ترجیحی (با «،» جدا کنید، همان‌طور که در فهرست دروس آمده)</span>
+          <span>{t("استادهای ترجیحی (با «،» جدا کنید، همان‌طور که در فهرست دروس آمده)")}</span>
           <input
             type="text"
             defaultValue={set.prefs.preferredTeachers.join("، ")}
@@ -116,10 +117,10 @@ export function Settings({ settings, dispatch }: { settings: S; dispatch: (a: Ac
       </fieldset>
 
       <fieldset className="card stack">
-        <legend>هشدار فاصله امتحان‌ها</legend>
+        <legend>{t("هشدار فاصله امتحان‌ها")}</legend>
         <label className="field">
-          <span>اگر دو امتحان کمتر از این تعداد روز فاصله داشتند هشدار بده (خالی: خاموش)</span>
-          <NumberInput value={set.minExamGapDays} onChange={(v) => patch({ minExamGapDays: v !== null && v >= 1 ? Math.round(v) : null })} placeholder="خاموش" />
+          <span>{t("اگر دو امتحان کمتر از این تعداد روز فاصله داشتند هشدار بده (خالی: خاموش)")}</span>
+          <NumberInput value={set.minExamGapDays} onChange={(v) => patch({ minExamGapDays: v !== null && v >= 1 ? Math.round(v) : null })} placeholder={t("خاموش")} />
         </label>
       </fieldset>
     </section>
@@ -149,32 +150,32 @@ function BlocksEditor({ settings, dispatch }: { settings: S; dispatch: (a: Actio
   const valid = start < end;
   return (
     <fieldset className="card stack">
-      <legend>بازه‌های مسدود</legend>
-      <p className="small muted">در این بازه‌ها کلاسی چیده نمی‌شود (مثلاً کار یا رفت‌وآمد).</p>
+      <legend>{t("بازه‌های مسدود")}</legend>
+      <p className="small muted">{t("در این بازه‌ها کلاسی چیده نمی‌شود (مثلاً کار یا رفت‌وآمد).")}</p>
       <ul className="plain stack">
         {settings.blocks.map((b, i) => (
           <li key={i} className="row between gap">
             <span>
-              {DAY_NAMES[b.day]} {timeRange(b.start, b.end)}
+              {t(DAY_NAMES[b.day]!)} {timeRange(b.start, b.end)}
             </span>
             <button className="link bad-text" onClick={() => dispatch({ type: "removeBlock", index: i })}>
-              حذف
+              {t("حذف")}
             </button>
           </li>
         ))}
       </ul>
       <div className="row wrap gap">
-        <select aria-label="روز" value={day} onChange={(e) => setDay(Number(e.target.value) as Day)}>
+        <select aria-label={t("روز")} value={day} onChange={(e) => setDay(Number(e.target.value) as Day)}>
           {DAY_NAMES.map((d, i) => (
             <option key={d} value={i}>
-              {d}
+              {t(d)}
             </option>
           ))}
         </select>
-        <input aria-label="از ساعت" type="time" value={start} onChange={(e) => setStart(e.target.value)} />
-        <input aria-label="تا ساعت" type="time" value={end} onChange={(e) => setEnd(e.target.value)} />
+        <input aria-label={t("از ساعت")} type="time" value={start} onChange={(e) => setStart(e.target.value)} />
+        <input aria-label={t("تا ساعت")} type="time" value={end} onChange={(e) => setEnd(e.target.value)} />
         <button className="secondary" disabled={!valid} onClick={() => dispatch({ type: "addBlock", block: { day, start, end } })}>
-          افزودن
+          {t("افزودن")}
         </button>
       </div>
     </fieldset>

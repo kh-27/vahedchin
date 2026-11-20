@@ -1,3 +1,4 @@
+import { t, tr } from "../lib/i18n";
 /** FR-47 department browsing, FR-48 search across all courses, FR-49 group details, FR-26 gender. */
 
 import { useMemo, useState } from "react";
@@ -36,11 +37,11 @@ export function Browse({
     <section>
       <div className="card stack">
         <label className="field">
-          <span>جست‌وجو در همه دروس (نام، کد یا استاد)</span>
+          <span>{t("جست‌وجو در همه دروس (نام، کد یا استاد)")}</span>
           <input
             type="search"
             value={query}
-            placeholder="مثلاً شیمی عمومی"
+            placeholder={t("مثلاً شیمی عمومی")}
             onChange={(e) => {
               setQuery(e.target.value);
               setShown(PAGE);
@@ -50,22 +51,22 @@ export function Browse({
         {!query.trim() && (
           <div className="row wrap gap">
             <label className="field grow">
-              <span>دانشکده</span>
+              <span>{t("دانشکده")}</span>
               <select value={faculty} onChange={(e) => onPlace(e.target.value, null)}>
-                <option value="">انتخاب کنید</option>
+                <option value="">{t("انتخاب کنید")}</option>
                 {index.faculties.map((f) => (
                   <option key={f}>{f}</option>
                 ))}
               </select>
             </label>
             <label className="field grow">
-              <span>گروه آموزشی و مقطع</span>
+              <span>{t("گروه آموزشی و مقطع")}</span>
               <select
                 value={department ?? ""}
                 disabled={!faculty}
                 onChange={(e) => onPlace(faculty, e.target.value === "" ? null : Number(e.target.value))}
               >
-                <option value="">انتخاب کنید</option>
+                <option value="">{t("انتخاب کنید")}</option>
                 {depts.map((i) => (
                   <option key={i} value={i}>
                     {index.data.departments[i]!.department} — {index.data.departments[i]!.level}
@@ -79,10 +80,10 @@ export function Browse({
 
       {found && (
         <p className="muted small">
-          {found.results.length === 0 ? "درسی پیدا نشد." : `${fa(found.results.length)}${found.more ? "+" : ""} درس`}
+          {found.results.length === 0 ? t("درسی پیدا نشد.") : `${fa(found.results.length)}${found.more ? "+" : ""} ${tr("درس", "courses", "مقررات")}`}
         </p>
       )}
-      {!found && department === null && <p className="muted">دانشکده و گروه آموزشی را انتخاب کنید، یا جست‌وجو کنید.</p>}
+      {!found && department === null && <p className="muted">{t("دانشکده و گروه آموزشی را انتخاب کنید، یا جست‌وجو کنید.")}</p>}
 
       <ul className="plain courses">
         {list.slice(0, shown).map((c) => (
@@ -91,7 +92,7 @@ export function Browse({
       </ul>
       {list.length > shown && (
         <button className="secondary wide" onClick={() => setShown(shown + PAGE)}>
-          نمایش {fa(Math.min(PAGE, list.length - shown))} درس دیگر
+          {tr("نمایش", "Show", "عرض")} {fa(Math.min(PAGE, list.length - shown))} {tr("درس دیگر", "more courses", "مقررات أخرى")}
         </button>
       )}
     </section>
@@ -125,7 +126,7 @@ function CourseCard({
         <button className="link course-title" aria-expanded={open} onClick={() => setOpen(!open)}>
           <span className="course-name">{fa(c.name)}</span>
           <span className="muted small">
-            {fa(c.course)}، {faNumber(c.units)} واحد، {fa(groups.length)} گروه
+            {fa(c.course)}، {faNumber(c.units)} {tr("واحد", "credits", "وحدات")}، {fa(groups.length)} {tr("گروه", "groups", "مجموعات")}
           </span>
           {showFaculty && <span className="muted small">{faculties}</span>}
         </button>
@@ -133,7 +134,7 @@ function CourseCard({
           className={inPlan ? "secondary" : "primary"}
           onClick={() => dispatch(inPlan ? { type: "removeCourse", course: c.course } : { type: "addCourse", course: c.course })}
         >
-          {inPlan ? "حذف از برنامه" : "افزودن"}
+          {inPlan ? t("حذف از برنامه") : t("افزودن")}
         </button>
       </div>
       {open && (
@@ -146,13 +147,13 @@ function CourseCard({
                   className={picked === g.code ? "secondary small-btn" : "small-btn"}
                   onClick={() => dispatch({ type: "pick", course: c.course, group: picked === g.code ? null : g })}
                 >
-                  {picked === g.code ? "برداشتن از جدول" : "گذاشتن در جدول"}
+                  {picked === g.code ? t("برداشتن از جدول") : t("گذاشتن در جدول")}
                 </button>
                 <span className="muted small">{timesSummary(g)}</span>
               </div>
             </li>
           ))}
-          {hidden > 0 && <li className="muted small">{fa(hidden)} گروه با جنسیت دیگر پنهان شد.</li>}
+          {hidden > 0 && <li className="muted small">{fa(hidden)} {tr("گروه با جنسیت دیگر پنهان شد.", "groups hidden by the gender filter.", "مجموعات مخفية حسب فلتر الجنس.")}</li>}
         </ul>
       )}
     </li>

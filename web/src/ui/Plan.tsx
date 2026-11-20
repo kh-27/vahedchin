@@ -1,3 +1,4 @@
+import { t, tr } from "../lib/i18n";
 /** FR-42: hand-made schedule with live warnings; FR-21, FR-22 per course; FR-40, FR-41 views. */
 
 import { useMemo, useState } from "react";
@@ -44,9 +45,9 @@ export function Plan({
   if (scenario.courses.length === 0) {
     return (
       <section className="card stack">
-        <p>هنوز درسی به این برنامه اضافه نکرده‌اید.</p>
+        <p>{t("هنوز درسی به این برنامه اضافه نکرده‌اید.")}</p>
         <button className="primary" onClick={onBrowse}>
-          رفتن به فهرست دروس
+          {t("رفتن به فهرست دروس")}
         </button>
       </section>
     );
@@ -56,9 +57,9 @@ export function Plan({
     <section className="stack">
       <div className="card stack">
         <div className="row between wrap gap">
-          <h2>دروس این برنامه</h2>
+          <h2>{t("دروس این برنامه")}</h2>
           <button className="primary" onClick={onGenerate}>
-            چیدن خودکار
+            {t("چیدن خودکار")}
           </button>
         </div>
         <ul className="plain stack">
@@ -82,7 +83,7 @@ export function Plan({
           })}
         </ul>
         <p className={unitsAllowed(units, limits) ? "small" : "small bad-text"}>
-          جمع واحدهای جدول: {faNumber(units)} (مجاز: {fa(limits.min)} تا {fa(limits.max)})
+          {tr("جمع واحدهای جدول", "Total credits", "إجمالي الوحدات")}: {faNumber(units)} ({tr("مجاز", "allowed", "المسموح")}: {fa(limits.min)}–{fa(limits.max)})
         </p>
       </div>
 
@@ -90,7 +91,7 @@ export function Plan({
 
       <div className="card">
         <div className="row between wrap gap">
-          <h2>جدول هفتگی</h2>
+          <h2>{t("جدول هفتگی")}</h2>
           <button
             className="secondary small-btn"
             disabled={picked.length === 0 || saving}
@@ -110,13 +111,13 @@ export function Plan({
               }
             }}
           >
-            دانلود تصویر (PNG)
+            {t("دانلود تصویر (PNG)")}
           </button>
         </div>
         <WeekGrid groups={picked} colorOf={colorOf} />
         {singleDate.length > 0 && (
           <div className="small">
-            <h3>جلسه‌های تک‌تاریخی (در تداخل هفتگی حساب نمی‌شوند)</h3>
+            <h3>{t("جلسه‌های تک‌تاریخی (در تداخل هفتگی حساب نمی‌شوند)")}</h3>
             <ul className="plain">
               {singleDate.map(({ g, s }, i) => (
                 <li key={i}>
@@ -129,7 +130,7 @@ export function Plan({
       </div>
 
       <div className="card">
-        <h2>برنامه امتحانات</h2>
+        <h2>{t("برنامه امتحانات")}</h2>
         <ExamList groups={picked} colorOf={colorOf} minGapDays={set.minExamGapDays} />
       </div>
     </section>
@@ -139,7 +140,7 @@ export function Plan({
 function Warnings({ report }: { report: ReturnType<typeof findConflicts> }) {
   const items = [
     ...report.conflicts.map((c) => ({ bad: true, text: conflictText(c) })),
-    ...report.blocked.map((b) => ({ bad: true, text: `در بازه مسدود: ${groupTitle(b.group)} — ${sessionLabel(b.session)}` })),
+    ...report.blocked.map((b) => ({ bad: true, text: `${tr("در بازه مسدود", "Blocked time", "وقت محظور")}: ${groupTitle(b.group)} — ${sessionLabel(b.session)}` })),
     ...report.warnings.map((w) => ({ bad: false, text: warningText(w) })),
   ];
   if (items.length === 0) return null;
@@ -179,25 +180,25 @@ function CourseRow(props: {
         <div className="row gap">
           <label className="check small">
             <input type="checkbox" checked={required} onChange={(e) => dispatch({ type: "setRequired", course, required: e.target.checked })} />
-            ضروری
+            {t("ضروری")}
           </label>
           <button className="link small" onClick={() => setOpen(!open)} aria-expanded={open}>
-            قفل / کنار گذاشتن
+            {t("قفل / کنار گذاشتن")}
           </button>
           <button className="link small bad-text" onClick={() => dispatch({ type: "removeCourse", course })}>
-            حذف
+            {t("حذف")}
           </button>
         </div>
       </div>
       <select
-        aria-label={`گروه ${name}`}
+        aria-label={`${tr("گروه", "Group", "المجموعة")} ${name}`}
         value={pickedCode ?? ""}
         onChange={(e) => dispatch({ type: "pick", course, group: groups.find((g) => g.code === e.target.value) ?? null })}
       >
-        <option value="">— بدون گروه در جدول —</option>
+        <option value="">{t("— بدون گروه در جدول —")}</option>
         {groups.map((g) => (
           <option key={g.code} value={g.code}>
-            {clashes(g) ? "⚠ " : ""}گروه {fa(g.group)}، {g.teacher || "?"}، {timesSummary(g)}
+            {clashes(g) ? "⚠ " : ""}{tr("گروه", "Group", "المجموعة")} {fa(g.group)}، {g.teacher || "?"}، {timesSummary(g)}
           </option>
         ))}
       </select>
@@ -206,7 +207,7 @@ function CourseRow(props: {
           {groups.map((g) => (
             <li key={g.code} className="row between gap">
               <span>
-                گروه {fa(g.group)}، {g.teacher || "?"}
+                {tr("گروه", "Group", "المجموعة")} {fa(g.group)}، {g.teacher || "?"}
               </span>
               <span className="row gap">
                 <label className="check">
@@ -215,11 +216,11 @@ function CourseRow(props: {
                     checked={locked === g.code}
                     onChange={(e) => dispatch({ type: "setLocked", course, code: e.target.checked ? g.code : null })}
                   />
-                  قفل
+                  {t("قفل")}
                 </label>
                 <label className="check">
                   <input type="checkbox" checked={excluded.includes(g.code)} onChange={() => dispatch({ type: "toggleExcluded", course, code: g.code })} />
-                  کنار
+                  {t("کنار")}
                 </label>
               </span>
             </li>
