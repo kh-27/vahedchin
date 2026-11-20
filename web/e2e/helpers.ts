@@ -2,6 +2,7 @@ import { expect, type Page } from "@playwright/test";
 
 export async function open(page: Page) {
   await page.goto("./");
+  await page.getByRole("button", { name: "ورود به برنامه" }).click();
   await expect(page.getByRole("heading", { name: "واحدچین" })).toBeVisible();
   await expect(page.getByText("داده گلستان:")).toBeVisible();
 }

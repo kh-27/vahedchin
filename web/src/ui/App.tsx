@@ -1,5 +1,5 @@
 import { setLanguage, t, tr, type Language } from "../lib/i18n";
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from "react";
 import { active, generateInput, initialState, manualEventGroup, pickProblems, reducer, type AppState } from "../app/scenario";
 import { runGenerate, type Running } from "../app/runGenerate";
 import type { TermIndex } from "../app/termIndex";
@@ -33,10 +33,53 @@ export function App() {
     document.documentElement.dir = language === "en" ? "ltr" : "rtl";
     try { localStorage.setItem("language", language); } catch { /* private browsing */ }
   }, [language]);
+  const [theme, setTheme] = useState(() => {
+    const saved = remembered<string>("theme", "");
+    return saved === "light" || saved === "dark" ? saved : window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  });
+  useLayoutEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    remember("theme", theme);
+  }, [theme]);
+  const [entered, setEntered] = useState(() => remembered("entered", false));
+  const [firstLoad] = useState(() => !remembered("intro-seen", false));
   const term = useTerm();
+  useEffect(() => {
+    if (term.status === "ready") remember("intro-seen", true);
+  }, [term.status]);
+  const controls = <div className="row gap appearance">
+    <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+      {theme === "dark" ? tr("☀ حالت روشن", "☀ Light mode", "☀ الوضع الفاتح") : tr("☾ حالت تاریک", "☾ Dark mode", "☾ الوضع الداكن")}
+    </button>
+    <select aria-label="Language / اللغة / زبان" value={language} onChange={(e) => changeLanguage(e.target.value as Language)}>
+      <option value="fa">فارسی</option><option value="en">English</option><option value="ar">العربية</option>
+    </select>
+  </div>;
+  if (firstLoad && term.status === "loading") return (
+    <main className="intro splash" role="status">
+      <span className="seal" aria-hidden="true">و</span>
+      <h1>{t("واحدچین")}</h1><progress aria-label={t("در حال دریافت داده ارائه دروس…")} />
+      <p>{t("در حال دریافت داده ارائه دروس…")}</p>
+    </main>
+  );
   if (term.status === "loading") return <Shell>{t("در حال دریافت داده ارائه دروس…")}</Shell>;
   if (term.status === "error") return <Shell>{tr("داده دریافت نشد:", "Could not load data:", "تعذر تحميل البيانات:")} {term.message}</Shell>;
-  return <Ready index={term.index} language={language} onLanguage={changeLanguage} />;
+  if (!entered) return (
+    <main className="entry app">
+      {controls}
+      <section className="entry-card">
+        <div className="entry-cover" aria-hidden="true"><span className="seal">و</span><div className="calendar-art"><i/><i/><i/><i/></div></div>
+        <div className="entry-copy"><p>{tr("دانشگاه سمنان", "Semnan University", "جامعة سمنان")}</p>
+          <h1>{t("واحدچین")}</h1>
+          <p>{tr("درس‌هایت را انتخاب کن و برنامهٔ هفتگی و امتحان‌هایت را کنار هم ببین.", "Choose your courses and see your weekly timetable and exams together.", "اختر مقرراتك واعرض جدولك الأسبوعي وامتحاناتك معاً.")}</p>
+          <button className="primary" onClick={() => { remember("entered", true); setEntered(true); }}>
+            {tr("ورود به برنامه", "Open planner", "الدخول إلى المخطط")}
+          </button>
+        </div>
+      </section>
+    </main>
+  );
+  return <Ready index={term.index} controls={controls} />;
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -67,7 +110,7 @@ function remember(key: string, value: unknown) {
   }
 }
 
-function Ready({ index, language, onLanguage }: { index: TermIndex; language: Language; onLanguage: (language: Language) => void }) {
+function Ready({ index, controls }: { index: TermIndex; controls: React.ReactNode }) {
   const data = index.data;
   const [state, dispatch] = useReducer(reducer, data.term, initialState);
   const [loaded, setLoaded] = useState(false);
@@ -135,11 +178,12 @@ function Ready({ index, language, onLanguage }: { index: TermIndex; language: La
     <main className="app">
       <header className="top">
         <div className="topbar">
-          <div className="brand"><span className="brand-mark" aria-hidden="true">و</span><div><h1>{t("واحدچین")}</h1><span>SEMESTER PLANNER</span></div></div>
-          <div className="row wrap gap"><label className="language-picker"><span className="sr-only">Language / اللغة / زبان</span><select aria-label="Language / اللغة / زبان" value={language} onChange={(event) => onLanguage(event.target.value as Language)}><option value="fa">فارسی</option><option value="en">English</option><option value="ar">العربية</option></select></label><ScenarioBar state={state} dispatch={dispatch} term={data.term} /></div>
+          <div className="brand"><span className="brand-mark" aria-hidden="true">و</span><div><h1>{t("واحدچین")}</h1><span>{tr("دانشگاه سمنان", "Semnan University", "جامعة سمنان")}</span></div></div>
+          <div className="row wrap gap">{controls}<ScenarioBar state={state} dispatch={dispatch} term={data.term} /></div>
         </div>
         <div className="hero">
-          <div><p className="eyebrow">{t("دانشگاه سمنان · برنامه‌ریزی هوشمند")}</p><h2>{t("ترم خودت را با اطمینان بچین.")}</h2><p>{t("دروس را پیدا کن، برنامه‌ها را مقایسه کن و بدون تداخل برای ترم پیش رو آماده شو.")}</p></div>
+          <div><h2>{tr("میز انتخاب واحد", "Semester planner", "تخطيط الفصل الدراسي")}</h2>
+            <p>{tr("برنامهٔ فعال", "Current schedule", "الجدول الحالي")} · {scenario.name}</p></div>
           <div className="term-panel"><span>{t("نیمسال جاری")}</span><strong>{fa(data.termTitle)}</strong><small>{t("داده گلستان:")} {faReportTime(data.reportDate, data.reportTime)}</small></div>
         </div>
       </header>

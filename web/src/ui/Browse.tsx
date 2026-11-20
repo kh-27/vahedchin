@@ -9,7 +9,7 @@ import { genderAllowed } from "../core/rules";
 import type { Action, Scenario } from "../app/scenario";
 import { departmentsOf, search, type CourseInfo, type TermIndex } from "../app/termIndex";
 import { timesSummary } from "../lib/labels";
-import { fa, faNumber } from "../lib/text";
+import { fa, faNumber, latinDigits } from "../lib/text";
 import { GroupDetails } from "./GroupDetails";
 
 const PAGE = 40;
@@ -42,24 +42,29 @@ export function Browse({
 
   return (
     <section>
-      <div className="card stack"><h2>{tr("گزارش ۲۱۲ گلستان", "Golestan report 212", "تقرير گلستان ٢١٢")}</h2>
-        <p className="small muted">{tr("فایل فقط در مرورگر شما خوانده می‌شود. گروه‌های تطبیق‌یافته نمایش داده می‌شوند؛ درس‌های موردنظر را خودتان انتخاب کنید.", "The file is read only in your browser. Matching groups are shown; choose your courses yourself.", "يُقرأ الملف في متصفحك فقط. تظهر المجموعات المطابقة؛ اختر مقرراتك بنفسك.")}</p>
-        <label className="field"><span>{tr("بارگذاری فایل PDF", "Upload PDF", "تحميل ملف PDF")}</span><input type="file" accept="application/pdf,.pdf" disabled={reading} onChange={async (e) => { const file = e.target.files?.[0]; e.target.value = ""; if (!file) return; setReading(true); setReportMessage(""); try { const codes = await readReport212(file); const matches = codes.filter((code) => index.byCode.has(code)); if (!matches.length) { setReportMessage(tr("هیچ گروهی با داده ترم فعلی تطبیق نداشت؛ ترم گزارش را بررسی کنید.", "No groups match the current semester data; check the report semester.", "لا توجد مجموعات مطابقة لبيانات الفصل الحالي؛ تحقق من فصل التقرير.")); return; } dispatch({ type: "setReportGroups", codes: matches }); setShown(PAGE); setReportMessage(tr(`${fa(matches.length)} گروه تطبیق یافت؛ ${fa(codes.length - matches.length)} گروه در داده فعلی نبود.`, `${matches.length} groups matched; ${codes.length - matches.length} were absent from current data.`, `طابقت ${fa(matches.length)} مجموعة؛ لم توجد ${fa(codes.length - matches.length)} مجموعة في البيانات الحالية.`)); } catch { setReportMessage(tr("فایل خوانده نشد یا ساختار گزارش پشتیبانی نمی‌شود.", "The file could not be read or the report format is unsupported.", "تعذرت قراءة الملف أو أن تنسيق التقرير غير مدعوم.")); } finally { setReading(false); } }} /></label>
-        {reportMessage && <p role="status" className="small">{reportMessage}</p>}{reportCodes && <div className="row wrap gap"><span>{tr("فیلتر گزارش ۲۱۲ فعال است", "Report 212 filter is active", "تصفية التقرير ٢١٢ مفعّلة")}</span><button className="secondary small-btn" onClick={() => { dispatch({ type: "setReportGroups", codes: null }); setReportMessage(""); }}>{tr("حذف فیلتر", "Clear filter", "إزالة التصفية")}</button></div>}
-      </div>
       <div className="card stack">
         <label className="field">
           <span>{t("جست‌وجو در همه دروس (نام، کد یا استاد)")}</span>
           <input
             type="search"
             value={query}
-            placeholder={t("مثلاً شیمی عمومی")}
+            placeholder={tr("نام درس، استاد یا کد ۷ رقمی", "Course, instructor or 7-digit code", "اسم المقرر أو الأستاذ أو رمز من ٧ أرقام")}
+            onKeyDown={(e) => {
+              const code = latinDigits(query.trim());
+              if (e.key === "Enter" && !e.nativeEvent.isComposing && list.length === 1 && list[0]?.course === code) {
+                dispatch({ type: "addCourse", course: code });
+              }
+            }}
             onChange={(e) => {
               setQuery(e.target.value);
               setShown(PAGE);
             }}
           />
         </label>
+        {list.length === 1 && list[0]?.course === latinDigits(query.trim()) &&
+          <p role="status">{scenario.courses.some((c) => c.course === list[0]!.course)
+            ? tr("در برنامهٔ شماست", "In your schedule", "مضاف إلى جدولك")
+            : tr("برای افزودن این درس Enter را بزنید.", "Press Enter to add this course.", "اضغط Enter لإضافة هذا المقرر.")}</p>}
         {!query.trim() && !reportCodes && (
           <div className="row wrap gap">
             <label className="field grow">
@@ -90,6 +95,11 @@ export function Browse({
         )}
       </div>
 
+      <div className="card stack"><h2>{tr("گزارش ۲۱۲ گلستان", "Golestan report 212", "تقرير گلستان ٢١٢")}</h2>
+        <p className="small muted">{tr("فایل فقط در مرورگر شما خوانده می‌شود. گروه‌های تطبیق‌یافته نمایش داده می‌شوند؛ درس‌های موردنظر را خودتان انتخاب کنید.", "The file is read only in your browser. Matching groups are shown; choose your courses yourself.", "يُقرأ الملف في متصفحك فقط. تظهر المجموعات المطابقة؛ اختر مقرراتك بنفسك.")}</p>
+        <label className="field"><span>{tr("بارگذاری فایل PDF", "Upload PDF", "تحميل ملف PDF")}</span><input type="file" accept="application/pdf,.pdf" disabled={reading} onChange={async (e) => { const file = e.target.files?.[0]; e.target.value = ""; if (!file) return; setReading(true); setReportMessage(""); try { const codes = await readReport212(file); const matches = codes.filter((code) => index.byCode.has(code)); if (!matches.length) { setReportMessage(tr("هیچ گروهی با داده ترم فعلی تطبیق نداشت؛ ترم گزارش را بررسی کنید.", "No groups match the current semester data; check the report semester.", "لا توجد مجموعات مطابقة لبيانات الفصل الحالي؛ تحقق من فصل التقرير.")); return; } dispatch({ type: "setReportGroups", codes: matches }); setShown(PAGE); setReportMessage(tr(`${fa(matches.length)} گروه تطبیق یافت؛ ${fa(codes.length - matches.length)} گروه در داده فعلی نبود.`, `${matches.length} groups matched; ${codes.length - matches.length} were absent from current data.`, `طابقت ${fa(matches.length)} مجموعة؛ لم توجد ${fa(codes.length - matches.length)} مجموعة في البيانات الحالية.`)); } catch { setReportMessage(tr("فایل خوانده نشد یا ساختار گزارش پشتیبانی نمی‌شود.", "The file could not be read or the report format is unsupported.", "تعذرت قراءة الملف أو أن تنسيق التقرير غير مدعوم.")); } finally { setReading(false); } }} /></label>
+        {reportMessage && <p role="status" className="small">{reportMessage}</p>}{reportCodes && <div className="row wrap gap"><span>{tr("فیلتر گزارش ۲۱۲ فعال است", "Report 212 filter is active", "تصفية التقرير ٢١٢ مفعّلة")}</span><button className="secondary small-btn" onClick={() => { dispatch({ type: "setReportGroups", codes: null }); setReportMessage(""); }}>{tr("حذف فیلتر", "Clear filter", "إزالة التصفية")}</button></div>}
+      </div>
       {found && (
         <p className="muted small search-count">
           {list.length === 0 ? t("درسی پیدا نشد.") : `${fa(list.length)}${found.more && !reportCodes ? "+" : ""} ${tr("درس", "courses", "مقررات")}`}

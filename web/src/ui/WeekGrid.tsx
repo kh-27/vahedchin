@@ -7,7 +7,7 @@ import { weekLabel } from "../lib/labels";
 import { fa } from "../lib/text";
 import { weekLayout } from "./weekLayout";
 
-const PX_PER_MIN = 0.9;
+const PX_PER_MIN = 1.4;
 
 export function courseColor(index: number): string {
   return `var(--c${index % 10})`;
@@ -21,6 +21,7 @@ export function WeekGrid({ groups, colorOf }: { groups: Group[]; colorOf: (cours
   const columns = `2.2rem repeat(${days.length}, 1fr)`;
 
   return (
+    <div className="week-scroll" tabIndex={0} role="region" aria-label={t("جدول هفتگی")}>
     <div className="week" role="table" aria-label={t("جدول هفتگی")}>
       <div className="week-head" role="row" style={{ gridTemplateColumns: columns }}>
         <span />
@@ -70,6 +71,7 @@ export function WeekGrid({ groups, colorOf }: { groups: Group[]; colorOf: (cours
           </div>
         ))}
       </div>
+    </div>
     </div>
   );
 }

@@ -58,6 +58,8 @@ export function buildIndex(data: TermData): TermIndex {
  */
 export function search(index: TermIndex, query: string, limit = 50): { results: CourseInfo[]; more: boolean } {
   const q = fold(query);
+  const exact = index.courses.get(q);
+  if (exact) return { results: limit > 0 ? [exact] : [], more: limit < 1 };
   const words = q.split(" ").filter(Boolean);
   if (words.length === 0) return { results: [], more: false };
   const compact = q.replace(/ /g, "");
