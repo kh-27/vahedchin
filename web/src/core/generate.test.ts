@@ -308,3 +308,13 @@ describe("final semester and instructor exclusions", () => {
     expect(result.results.map(codes)).toEqual([b.code]);
   });
 });
+
+
+it("accepts a 24-credit schedule when the excellent-student limit is selected", () => {
+  const groups = Array.from({ length: 8 }, (_, i) => group(`800000${i}_01`));
+  const courses = groups.map((g) => req(g.course));
+  expect(generate({ groups, courses, limits: { min: 12, max: 20 } }).total).toBe(0);
+  const result = generate({ groups, courses, limits: { min: 12, max: 24 } });
+  expect(result.total).toBe(1);
+  expect(result.results[0]!.units).toBe(24);
+});

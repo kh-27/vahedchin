@@ -23,3 +23,18 @@ test("directory displays sourced contacts", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "دفتر تلفن ۱۱۸ دانشگاه" })).toBeVisible();
   await expect(page.locator("article.card").first()).toBeVisible();
 });
+
+
+test("excellent standing resets an old manual cap and allows 24 credits", async ({ page }) => {
+  await open(page);
+  await tab(page, /تنظیمات/).click();
+  await page.getByLabel("سقف دستی").fill("۲۰");
+  await page.getByLabel("یا معدل ترم قبل").fill("۱۵");
+  await page.getByRole("radio", { name: /معدل الف/ }).check();
+  await expect(page.getByLabel("سقف دستی")).toHaveValue("");
+  await expect(page.getByLabel("یا معدل ترم قبل")).toHaveValue("");
+  await expect(page.getByText("واحد مجاز: ۱۲–۲۴")).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("radio", { name: /معدل الف/ })).toBeChecked();
+  await expect(page.getByText("واحد مجاز: ۱۲–۲۴")).toBeVisible();
+});

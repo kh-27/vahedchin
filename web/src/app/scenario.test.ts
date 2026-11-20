@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, test } from "vitest";
 import { exam, group, session } from "../core/test-utils";
 import { active, fingerprint, generateInput, initialState, pickProblems, reducer, type Action, type AppState } from "./scenario";
 
@@ -124,4 +124,10 @@ describe("report 212 group filter", () => {
     state = run([{ type: "setReportGroups", codes: null }], state);
     expect(generateInput(active(state), [g1, g2]).groups).toHaveLength(2);
   });
+});
+
+
+test("excellent standing passes the 24-credit limit to the generator", () => {
+  const state = run([{ type: "settings", patch: { standing: "excellent", gpa: null, manualMax: null } }]);
+  expect(generateInput(active(state), []).limits.max).toBe(24);
 });

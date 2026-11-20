@@ -11,7 +11,7 @@ import { fa, latinDigits } from "../lib/text";
 
 const STANDING: { value: Standing; label: string }[] = [
   { value: "normal", label: `عادی (سقف ${fa(MAX_UNITS.normal)})` },
-  { value: "excellent", label: `ممتاز، معدل ≥ ۱۷ (سقف ${fa(MAX_UNITS.excellent)})` },
+  { value: "excellent", label: `معدل الف (معدل ≥ ۱۷، سقف ${fa(MAX_UNITS.excellent)})` },
   { value: "probation", label: `مشروط، معدل < ۱۲ (سقف ${fa(MAX_UNITS.probation)})` },
 ];
 
@@ -33,6 +33,7 @@ function parseNumber(s: string): number | null {
 
 export function Settings({ settings, dispatch, teachers }: { settings: S; dispatch: (a: Action) => void; teachers: string[] }) {
   const set = settings;
+  const [standingRevision, setStandingRevision] = useState(0);
   let limitsText: string;
   try {
     const l = unitLimits({ gpa: set.gpa, standing: set.standing, manualMin: set.manualMin, manualMax: set.manualMax });
@@ -48,13 +49,13 @@ export function Settings({ settings, dispatch, teachers }: { settings: S; dispat
         <legend>{t("سقف و کف واحد")}</legend>
         {STANDING.map((s) => (
           <label key={s.value} className="check">
-            <input type="radio" name="standing" checked={set.gpa === null && set.standing === s.value} onChange={() => patch({ standing: s.value, gpa: null })} />
-            {s.value === "normal" ? tr(`عادی (سقف ${fa(MAX_UNITS.normal)})`, `Normal (maximum ${fa(MAX_UNITS.normal)})`, `عادي (الحد الأقصى ${fa(MAX_UNITS.normal)})`) : s.value === "excellent" ? tr(`ممتاز، معدل ≥ ۱۷ (سقف ${fa(MAX_UNITS.excellent)})`, `Excellent, GPA ≥ 17 (maximum ${fa(MAX_UNITS.excellent)})`, `متفوق، المعدل ≥ ١٧ (الحد الأقصى ${fa(MAX_UNITS.excellent)})`) : tr(`مشروط، معدل < ۱۲ (سقف ${fa(MAX_UNITS.probation)})`, `Probation, GPA < 12 (maximum ${fa(MAX_UNITS.probation)})`, `إنذار، المعدل < ١٢ (الحد الأقصى ${fa(MAX_UNITS.probation)})`)}
+            <input type="radio" name="standing" checked={set.gpa === null && set.standing === s.value} onChange={() => { patch({ standing: s.value, gpa: null, manualMax: null }); setStandingRevision((value) => value + 1); }} />
+            {s.value === "normal" ? tr(`عادی (سقف ${fa(MAX_UNITS.normal)})`, `Normal (maximum ${fa(MAX_UNITS.normal)})`, `عادي (الحد الأقصى ${fa(MAX_UNITS.normal)})`) : s.value === "excellent" ? tr(`معدل الف (معدل ≥ ۱۷، سقف ${fa(MAX_UNITS.excellent)})`, `Excellent, GPA ≥ 17 (maximum ${fa(MAX_UNITS.excellent)})`, `متفوق، المعدل ≥ ١٧ (الحد الأقصى ${fa(MAX_UNITS.excellent)})`) : tr(`مشروط، معدل < ۱۲ (سقف ${fa(MAX_UNITS.probation)})`, `Probation, GPA < 12 (maximum ${fa(MAX_UNITS.probation)})`, `إنذار، المعدل < ١٢ (الحد الأقصى ${fa(MAX_UNITS.probation)})`)}
           </label>
         ))}
         <label className="field">
           <span>{t("یا معدل ترم قبل")}</span>
-          <NumberInput value={set.gpa} onChange={(gpa) => patch({ gpa: gpa !== null && gpa >= 0 && gpa <= 20 ? gpa : null })} placeholder="مثلاً ۱۷٫۵" />
+          <NumberInput key={`gpa-${standingRevision}`} value={set.gpa} onChange={(gpa) => patch({ gpa: gpa !== null && gpa >= 0 && gpa <= 20 ? gpa : null })} placeholder="مثلاً ۱۷٫۵" />
         </label>
         <div className="row gap">
           <label className="field grow">
@@ -63,7 +64,7 @@ export function Settings({ settings, dispatch, teachers }: { settings: S; dispat
           </label>
           <label className="field grow">
             <span>{t("سقف دستی")}</span>
-            <NumberInput value={set.manualMax} onChange={(manualMax) => patch({ manualMax })} placeholder={t("خودکار")} />
+            <NumberInput key={`max-${standingRevision}`} value={set.manualMax} onChange={(manualMax) => patch({ manualMax })} placeholder={t("خودکار")} />
           </label>
         </div>
         <p className="small">{limitsText}</p>
