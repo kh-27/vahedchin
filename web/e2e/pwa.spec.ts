@@ -35,6 +35,18 @@ test("NFR-14: installable: manifest, icons and an active service worker", async 
   expect(await page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true);
 });
 
+test("a new worker takes over with the planner open and retains the saved plan", async ({ page }) => {
+  await open(page);
+  await waitForOfflineReady(page);
+  await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller)).toBe(true);
+  const name = await addFirstCourse(page);
+  await page.evaluate(() => navigator.serviceWorker.register("./sw.js?upgrade-test").then(() => undefined));
+  await expect.poll(() => page.evaluate(() => navigator.serviceWorker.controller?.scriptURL)).toContain("?upgrade-test");
+  await page.reload();
+  await tab(page, /برنامه/).click();
+  await expect(page.locator(".course-row strong")).toHaveText(name);
+});
+
 test("FR-53: after the first visit the app, the data and planning work offline", async ({ page, context }) => {
   await open(page);
   await waitForOfflineReady(page);

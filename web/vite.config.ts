@@ -26,13 +26,14 @@ function serviceWorker(): Plugin {
     generateBundle(_options, bundle) {
       const built = Object.keys(bundle).filter((f) => !f.endsWith(".map"));
       const files = ["./", ...new Set([...built, ...publicShellFiles(join(import.meta.dirname, "public"))])].sort();
-      const hash = createHash("sha256");
+      const worker = readFileSync(join(import.meta.dirname, "src/sw/sw.js"), "utf-8");
+      const hash = createHash("sha256").update(worker);
       for (const f of built) {
         const item = bundle[f]!;
         hash.update(f).update(item.type === "chunk" ? item.code : item.source);
       }
       const head = `const VERSION = ${JSON.stringify(hash.digest("hex").slice(0, 12))};\nconst PRECACHE = ${JSON.stringify(files)};\n`;
-      this.emitFile({ type: "asset", fileName: "sw.js", source: head + readFileSync(join(import.meta.dirname, "src/sw/sw.js"), "utf-8") });
+      this.emitFile({ type: "asset", fileName: "sw.js", source: head + worker });
     },
   };
 }
