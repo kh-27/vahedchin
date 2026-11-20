@@ -128,19 +128,10 @@ function Ready({ index, controls }: { index: TermIndex; controls: React.ReactNod
       .finally(() => setLoaded(true));
     void persist();
   }, []);
-  // Save at once (a debounce lost the last change when the page closed quickly), and again on pagehide.
-  const latest = useRef(state);
-  useEffect(() => {
-    latest.current = state;
+  // Queue the IndexedDB write before painting the updated plan, including on a rapid reload.
+  useLayoutEffect(() => {
     if (loaded) saveState(state).catch((e: unknown) => setStorageError(String(e)));
   }, [state, loaded]);
-  useEffect(() => {
-    const flush = () => {
-      if (loaded) void saveState(latest.current).catch(() => {});
-    };
-    window.addEventListener("pagehide", flush);
-    return () => window.removeEventListener("pagehide", flush);
-  }, [loaded]);
 
   useEffect(() => remember("tab", tab), [tab]);
   useEffect(() => remember("place", place), [place]);
@@ -156,6 +147,8 @@ function Ready({ index, controls }: { index: TermIndex; controls: React.ReactNod
     [scenario.courses],
   );
   const problems = useMemo(() => pickProblems(scenario, index.byCode), [scenario, index]);
+
+  if (!loaded) return <Shell>{tr("در حال بازیابی برنامه…", "Restoring your schedule…", "جارٍ استعادة جدولك…")}</Shell>;
 
   const run = () => {
     running.current?.cancel();

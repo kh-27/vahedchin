@@ -6,13 +6,21 @@ const DB = "vahedchin";
 const STORE = "state";
 const KEY = "app";
 
+let connection: Promise<IDBDatabase> | undefined;
+
 function open(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
+  connection ??= new Promise<IDBDatabase>((resolve, reject) => {
     const req = indexedDB.open(DB, 1);
     req.onupgradeneeded = () => req.result.createObjectStore(STORE);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      const db = req.result;
+      db.onversionchange = () => { db.close(); connection = undefined; };
+      db.onclose = () => { connection = undefined; };
+      resolve(db);
+    };
+    req.onerror = () => { connection = undefined; reject(req.error); };
   });
+  return connection;
 }
 
 function run<T>(mode: IDBTransactionMode, f: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> {
@@ -21,14 +29,8 @@ function run<T>(mode: IDBTransactionMode, f: (store: IDBObjectStore) => IDBReque
       new Promise<T>((resolve, reject) => {
         const tx = db.transaction(STORE, mode);
         const req = f(tx.objectStore(STORE));
-        tx.oncomplete = () => {
-          db.close();
-          resolve(req.result);
-        };
-        tx.onerror = () => {
-          db.close();
-          reject(tx.error);
-        };
+        tx.oncomplete = () => resolve(req.result);
+        tx.onabort = () => reject(tx.error ?? new Error("Storage transaction aborted"));
       }),
   );
 }
